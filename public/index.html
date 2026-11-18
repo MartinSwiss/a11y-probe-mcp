@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>A11y Probe — paid WCAG scans for agents</title>
+    <meta name="description" content="Automated WCAG scans for AI agents, paid per call with x402 USDC on Base. Automated checks find roughly 57% of WCAG issues.">
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <a class="skip" href="#content">Skip to content</a>
+    <header>
+      <p>A11y Probe</p>
+      <h1>WCAG scans agents can pay for</h1>
+      <p>One page, a small site, or a written report. Settled per call with USDC on Base. No account.</p>
+      <nav aria-label="On this page">
+        <ul>
+          <li><a href="#pricing">Pricing</a></li>
+          <li><a href="#pay">How to pay</a></li>
+          <li><a href="#limits">Limits</a></li>
+          <li><a href="/legal/terms">Terms</a></li>
+          <li><a href="/legal/privacy">Privacy</a></li>
+        </ul>
+      </nav>
+    </header>
+    <main id="content">
+      <section>
+        <h2>What you get</h2>
+        <p>Each scan lists rule ids, impact, WCAG tags, a short help link, up to three selectors, and an HTML snippet cut at 200 characters. Automated checks find roughly 57% of WCAG issues. A report is a template, not a lawyer, and it is not a compliance guarantee.</p>
+        <p>The MCP endpoint is <a href="/mcp"><code>/mcp</code></a> (Streamable HTTP). The same calls are under <code>/api/v1</code>.</p>
+      </section>
+
+      <section id="pricing">
+        <h2>Pricing</h2>
+        <table>
+          <caption>USD per call, paid in USDC</caption>
+          <thead>
+            <tr>
+              <th scope="col">Call</th>
+              <th scope="col">Price</th>
+              <th scope="col">What it does</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row"><code>get_pricing</code></th>
+              <td>0</td>
+              <td>Prices, limits, and links to the terms and privacy notice.</td>
+            </tr>
+            <tr>
+              <th scope="row"><code>scan_page</code></th>
+              <td>0.05</td>
+              <td>One public page. Default standard <code>wcag22aa</code>.</td>
+            </tr>
+            <tr>
+              <th scope="row"><code>scan_site</code></th>
+              <td>0.50</td>
+              <td>Up to 10 pages on the same origin, plus the top issues.</td>
+            </tr>
+            <tr>
+              <th scope="row"><code>report</code></th>
+              <td>1.00</td>
+              <td>Markdown report in German, French, or English.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="pay">
+        <h2>How to pay</h2>
+        <ol>
+          <li>Call the tool or <code>POST</code> the matching <code>/api/v1</code> route. Set <code>authorized</code> to <code>true</code>.</li>
+          <li>If the URL is allowed, the response is <strong>402</strong> with a <code>PAYMENT-REQUIRED</code> header: network, amount, and the <code>PAY_TO</code> address.</li>
+          <li>The caller signs an x402 USDC payment on Base Sepolia for tests, or Base for production, and retries with <code>PAYMENT-SIGNATURE</code>.</li>
+          <li>The scan runs. The facilitator settles only after it succeeds. The response includes <code>PAYMENT-RESPONSE</code>.</li>
+        </ol>
+        <p>A blocked URL, a <code>robots.txt</code> disallow, a rate limit, or a daily cap comes back as an error and is not a 402. Nothing is charged.</p>
+        <pre><code>curl -s -D - -X POST "$ORIGIN/api/v1/scan/page" \
+  -H 'content-type: application/json' \
+  -d '{"url":"https://example.com/","authorized":true}'</code></pre>
+      </section>
+
+      <section id="limits">
+        <h2>Limits</h2>
+        <ul>
+          <li>30 seconds per page, at most 10 pages per call, at most 5 redirects.</li>
+          <li>10 paid calls per minute per payer address or client IP.</li>
+          <li>50 pages per target domain per day, plus a global daily cap (20 by default) so Browser Run stays inside the free tier.</li>
+          <li>Only public <code>http</code> and <code>https</code> on ports 80 and 443. No IP literals, no private networks, no logins, no cookies, no form posts.</li>
+          <li>Page content is not stored. Logs keep the time, tool, price, transaction hash, payer address, and a hash of the domain.</li>
+        </ul>
+      </section>
+    </main>
+    <footer>
+      <p>Draft service for review. <a href="/legal/terms">Terms</a> · <a href="/legal/privacy">Privacy</a> · <a href="/legal/imprint">Imprint</a></p>
+    </footer>
+  </body>
+</html>

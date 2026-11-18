@@ -18,6 +18,13 @@
       "head_sampling_rate": 0.01
     }
   },
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "404-page",
+    "run_worker_first": ["/mcp", "/api/*"]
+  },
   "browser": {
     "binding": "BROWSER"
   },
@@ -53,6 +60,13 @@
   },
   "env": {
     "production": {
+      "assets": {
+        "directory": "./public",
+        "binding": "ASSETS",
+        "html_handling": "auto-trailing-slash",
+        "not_found_handling": "404-page",
+        "run_worker_first": ["/mcp", "/api/*"]
+      },
       "browser": {
         "binding": "BROWSER"
       },

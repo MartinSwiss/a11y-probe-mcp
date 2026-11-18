@@ -5,6 +5,9 @@
   "description": "Paid WCAG accessibility scans for AI agents. Automated checks find roughly 57% of WCAG issues.",
   "license": "MIT",
   "type": "module",
+  "bin": {
+    "a11y-probe-mcp": "./bin/a11y-probe-mcp.mjs"
+  },
   "engines": {
     "node": ">=22"
   },

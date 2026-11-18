@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Privacy notice (draft) — A11y Probe</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <a class="skip" href="#content">Skip to content</a>
+    <header>
+      <p><a href="/">A11y Probe</a></p>
+      <h1>Privacy notice</h1>
+    </header>
+    <main id="content">
+      <p class="banner"><strong>Draft.</strong> Written for the Swiss Federal Act on Data Protection (nDSG, in force 1 September 2023). For the owner and counsel to review before publication.</p>
+      <section>
+        <h2>Controller</h2>
+        <p>The controller is the person named in the <a href="/legal/imprint">imprint</a>. There is no customer account.</p>
+        <h2>Data used to perform a call</h2>
+        <ul>
+          <li>Time of the call.</li>
+          <li>Tool name and price.</li>
+          <li>Transaction hash and payer wallet address, after a successful settlement.</li>
+          <li>SHA-256 hash of the target domain, not the URL and not the page.</li>
+          <li>Client IP address, only as a rate-limit key. It is not written to the payment log.</li>
+        </ul>
+        <p>Page content and scan results are not stored. They exist only in memory while the call runs, then they are returned to the caller.</p>
+        <h2>Why</h2>
+        <p>The data is used to run the scan the caller asked for, to settle the x402 payment, and to enforce the published rate and daily caps. The legal bases are performance of the contract and the controller's legitimate interest in keeping the free tier within its limits (nDSG).</p>
+        <h2>Processors abroad</h2>
+        <p>The service runs on Cloudflare, Inc. (United States): the Worker, Browser Run, the rate limiter, the counter store, and Workers Logs. Payments are verified and settled by Coinbase, through the Coinbase Developer Platform facilitator (United States). Both are processors acting abroad. Disclosure abroad follows the nDSG. The controller does not sell this data and does not use it to train a model.</p>
+        <h2>Retention</h2>
+        <p>Daily counters expire after 48 hours. Log retention follows the Cloudflare account's Workers Logs setting, which the owner configures. Payment records on Base are on a public ledger and are not controlled by this service.</p>
+        <h2>Your rights</h2>
+        <p>Under the nDSG you can ask for access, correction, or deletion, and you can contact the Federal Data Protection and Information Commissioner. Requests go to the contact address in the imprint. A wallet address on its own may not be enough to identify a person; the controller will say so when that is the case.</p>
+        <h2>No legal decision</h2>
+        <p>The scan is a technical report. It is not a decision that produces a legal effect about the caller or about the scanned site.</p>
+      </section>
+    </main>
+    <footer>
+      <p><a href="/legal/terms">Terms</a> · <a href="/legal/imprint">Imprint</a></p>
+    </footer>
+  </body>
+</html>
