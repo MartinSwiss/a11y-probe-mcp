@@ -1,0 +1,6 @@
+# Copy to .dev.vars. Do not commit .dev.vars. These are not production secrets.
+# PAY_TO is the Base address that receives USDC. Swap it later without code changes.
+PAY_TO=0x0000000000000000000000000000000000000001
+# Only required when FACILITATOR_URL is the Coinbase CDP mainnet facilitator.
+CDP_API_KEY_ID=
+CDP_API_KEY_SECRET=
