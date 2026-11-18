@@ -1,0 +1,12 @@
+A11y Probe
+
+Copyright (c) 2026 MartinSwiss
+
+This project is licensed under the MIT License (see LICENSE).
+
+Third-party dependency
+----------------------
+axe-core (https://github.com/dequelabs/axe-core) is used unmodified as an
+npm dependency. axe-core is licensed under the Mozilla Public License 2.0.
+We do not vendor, rewrite, or relicense that package. Its source and license
+ship inside node_modules/axe-core when dependencies are installed.
