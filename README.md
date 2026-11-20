@@ -34,4 +34,18 @@ npm test
 npm run typecheck
 ```
 
-Do not put secrets in the repo. `PAY_TO` and facilitator credentials are environment values added with the payment worker, not with this engine.
+## Worker
+
+`POST /mcp` is a stateless MCP server (Streamable HTTP). The same tools are on `GET /api/v1/pricing` and `POST /api/v1/scan/page`, `/api/v1/scan/site`, and `/api/v1/report`.
+
+Paid calls use x402 (USDC). The default Worker config is Base Sepolia (`eip155:84532`, facilitator `https://x402.org/facilitator`). The `production` environment is Base mainnet (`eip155:8453`) and the Coinbase CDP facilitator, which needs `CDP_API_KEY_ID` and `CDP_API_KEY_SECRET`. `PAY_TO` is the deposit address and is read from the environment, so it can later be swapped for a Stripe crypto address without a code change.
+
+A scan that fails the SSRF check, `robots.txt`, the 10 calls/minute limiter, or a daily page cap is rejected before a 402. The facilitator settles only after the scan succeeds. Logs contain the timestamp, tool, price, transaction hash, payer address, and SHA-256 of the domain.
+
+```sh
+cp .dev.vars.example .dev.vars
+# set PAY_TO, then:
+npx wrangler dev
+```
+
+Do not put real keys or a funded address in the repo. Nothing in this repository is deployed.

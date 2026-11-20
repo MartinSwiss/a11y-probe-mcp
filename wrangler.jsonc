@@ -4,9 +4,8 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-11-18",
   "compatibility_flags": ["nodejs_compat"],
-  // axe-core builds `axe.source` from Function#toString(). Wrangler's default
-  // keep_names injects an esbuild `__name` helper into that string, and the
-  // helper is not in scope when the string is evaluated in the page.
+  // axe-core builds its injectable source with Function#toString(). Wrangler's
+  // default keep_names injects an esbuild `__name` helper into that string.
   "keep_names": false,
   "observability": {
     "enabled": true,
@@ -22,7 +21,66 @@
   "browser": {
     "binding": "BROWSER"
   },
+  // 10 paid calls per minute per key, in each Cloudflare location.
+  "ratelimits": [
+    {
+      "name": "RATE_LIMITER",
+      "namespace_id": "1001",
+      "simple": {
+        "limit": 10,
+        "period": 60
+      }
+    }
+  ],
+  // Daily page counters only. Create the namespace before deploy and replace the id.
+  "kv_namespaces": [
+    {
+      "binding": "CAPS",
+      "id": "00000000000000000000000000000000"
+    }
+  ],
+  // Testnet by default. `env.production` is mainnet. PAY_TO is a secret so the
+  // deposit address can be swapped (including a future Stripe crypto address)
+  // without a code change. CDP keys are unused on the testnet facilitator.
   "vars": {
-    "INFO_URL": "https://a11y-probe.example/"
+    "INFO_URL": "https://a11y-probe.example/",
+    "X402_NETWORK": "eip155:84532",
+    "FACILITATOR_URL": "https://x402.org/facilitator",
+    "GLOBAL_DAILY_PAGE_CAP": "20"
+  },
+  "secrets": {
+    "required": ["PAY_TO", "CDP_API_KEY_ID", "CDP_API_KEY_SECRET"]
+  },
+  "env": {
+    "production": {
+      "browser": {
+        "binding": "BROWSER"
+      },
+      "ratelimits": [
+        {
+          "name": "RATE_LIMITER",
+          "namespace_id": "1001",
+          "simple": {
+            "limit": 10,
+            "period": 60
+          }
+        }
+      ],
+      "kv_namespaces": [
+        {
+          "binding": "CAPS",
+          "id": "00000000000000000000000000000000"
+        }
+      ],
+      "vars": {
+        "INFO_URL": "https://a11y-probe.example/",
+        "X402_NETWORK": "eip155:8453",
+        "FACILITATOR_URL": "https://api.cdp.coinbase.com/platform/v2/x402",
+        "GLOBAL_DAILY_PAGE_CAP": "20"
+      },
+      "secrets": {
+        "required": ["PAY_TO", "CDP_API_KEY_ID", "CDP_API_KEY_SECRET"]
+      }
+    }
   }
 }
