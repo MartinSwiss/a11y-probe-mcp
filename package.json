@@ -1,0 +1,28 @@
+{
+  "name": "a11y-probe-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Paid WCAG accessibility scans for AI agents. Automated checks find roughly 57% of WCAG issues.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "cf-typegen": "wrangler types"
+  },
+  "dependencies": {
+    "@cloudflare/playwright": "^1.0.0",
+    "axe-core": "^4.11.0"
+  },
+  "devDependencies": {
+    "@types/jsdom": "^27.0.0",
+    "esbuild": "^0.25.0",
+    "jsdom": "^27.0.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0",
+    "wrangler": "^4.50.0"
+  }
+}

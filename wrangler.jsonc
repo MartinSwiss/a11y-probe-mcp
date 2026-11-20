@@ -1,0 +1,28 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "a11y-probe-mcp",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-18",
+  "compatibility_flags": ["nodejs_compat"],
+  // axe-core builds `axe.source` from Function#toString(). Wrangler's default
+  // keep_names injects an esbuild `__name` helper into that string, and the
+  // helper is not in scope when the string is evaluated in the page.
+  "keep_names": false,
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1
+    },
+    "traces": {
+      "enabled": true,
+      "head_sampling_rate": 0.01
+    }
+  },
+  "browser": {
+    "binding": "BROWSER"
+  },
+  "vars": {
+    "INFO_URL": "https://a11y-probe.example/"
+  }
+}
