@@ -9,7 +9,7 @@ import { PayToError, assertPayTo, payToAddress } from "./payments/facilitator";
 import { isInputFailure, preflight, readPaidRequest, statusFor, type PaidRequest } from "./preflight";
 import { buildReport } from "./scan/report";
 import { scanPage, scanSite, type ScanDeps } from "./scan/scan";
-import { resolveWithDoh } from "./scan/ssrf";
+import { boundFetch, resolveWithDoh } from "./scan/ssrf";
 
 export interface AppOptions {
   /** Browser Run stand-in. Production wires the real browser binding from index.ts. */
@@ -270,8 +270,8 @@ async function limit(request: Request, env: Env, token: string | null): Promise<
   return json({ error: { code: "rate_limit", message: "Rate limit exceeded. Try again in a minute." } }, 429);
 }
 
-function scanDependencies(env: Env, options: AppOptions): ScanDeps {
-  const fetchImpl = options.fetchImpl ?? fetch;
+export function scanDependencies(env: Env, options: AppOptions): ScanDeps {
+  const fetchImpl = options.fetchImpl ?? boundFetch;
   const resolveAddresses = options.resolveAddresses ?? ((hostname: string) => resolveWithDoh(hostname, fetchImpl));
   const agent = userAgent(env.INFO_URL);
   return {

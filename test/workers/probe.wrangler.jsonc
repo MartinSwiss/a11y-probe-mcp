@@ -1,0 +1,9 @@
+{
+  "name": "a11y-probe-fetch-probe",
+  "main": "./fetch-probe.ts",
+  "compatibility_date": "2026-11-18",
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "INFO_URL": "https://a11y-probe.example/"
+  }
+}

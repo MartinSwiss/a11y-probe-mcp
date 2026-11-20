@@ -9,6 +9,7 @@ export interface CapStore {
 export function kvCapStore(kv: KVNamespace): CapStore {
   return {
     async get(key) {
+      // Call the binding method on the namespace so `this` stays the KV binding.
       const value = await kv.get(key);
       const parsed = value === null ? 0 : Number(value);
       return Number.isFinite(parsed) ? parsed : 0;
@@ -66,6 +67,7 @@ export interface CallLimiter {
 export function bindingLimiter(limiter: RateLimit): CallLimiter {
   return {
     async limit(key) {
+      // Call limit on the binding. Copying the method off the binding loses `this`.
       const result = await limiter.limit({ key });
       return result.success;
     },

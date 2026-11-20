@@ -1,0 +1,2 @@
+# Empty on purpose. The workerd test points wrangler here so a local
+# .dev.vars cannot override the public PAY_TO in wrangler.jsonc.
