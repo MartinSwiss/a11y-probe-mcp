@@ -2,7 +2,7 @@ import { McpServer } from "@modelcontextprotocol/server";
 import { withX402 } from "agents/x402";
 import { z } from "zod";
 import { getPricing, PRICES_USD, REPORT_LANGUAGES, STANDARDS } from "./config";
-import { facilitatorConfigFor, payToAddress } from "./payments/facilitator";
+import { assertPayTo, facilitatorConfigFor } from "./payments/facilitator";
 import { pageDescription, reportDescription, siteDescription } from "./payments/bazaar";
 import { buildReport } from "./scan/report";
 import { scanPage, scanSite, type ScanDeps } from "./scan/scan";
@@ -11,7 +11,7 @@ const standard = z.enum(STANDARDS).optional();
 const authorized = z.literal(true).describe("Must be true. Confirms you may scan this URL.");
 
 export function createMcpServer(env: Env, deps: ScanDeps): McpServer {
-  const payTo = payToAddress(env.PAY_TO) ?? "0x0000000000000000000000000000000000000000";
+  const payTo = assertPayTo(env.PAY_TO);
   const server = withX402(new McpServer({ name: "a11y-probe-mcp", version: "0.1.0" }), {
     network: env.X402_NETWORK,
     recipient: payTo,

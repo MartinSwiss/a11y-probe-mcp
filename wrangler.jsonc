@@ -46,17 +46,20 @@
       "id": "00000000000000000000000000000000"
     }
   ],
-  // Testnet by default. `env.production` is mainnet. PAY_TO is a secret so the
-  // deposit address can be swapped (including a future Stripe crypto address)
-  // without a code change. CDP keys are unused on the testnet facilitator.
+  // Testnet by default (Base Sepolia). `env.production` is Base mainnet.
+  // PAY_TO is a public receiving address, not a secret. Override it with a
+  // PAY_TO secret or .dev.vars entry to swap wallets, including a future
+  // Stripe crypto deposit address, without a code change.
+  // CDP keys are unused on the testnet facilitator.
   "vars": {
     "INFO_URL": "https://a11y-probe.example/",
     "X402_NETWORK": "eip155:84532",
     "FACILITATOR_URL": "https://x402.org/facilitator",
-    "GLOBAL_DAILY_PAGE_CAP": "20"
+    "GLOBAL_DAILY_PAGE_CAP": "20",
+    "PAY_TO": "0x4C1265A4c0e7128aa71513080988dD609f3fDC32"
   },
   "secrets": {
-    "required": ["PAY_TO", "CDP_API_KEY_ID", "CDP_API_KEY_SECRET"]
+    "required": ["CDP_API_KEY_ID", "CDP_API_KEY_SECRET"]
   },
   "env": {
     "production": {
@@ -90,10 +93,11 @@
         "INFO_URL": "https://a11y-probe.example/",
         "X402_NETWORK": "eip155:8453",
         "FACILITATOR_URL": "https://api.cdp.coinbase.com/platform/v2/x402",
-        "GLOBAL_DAILY_PAGE_CAP": "20"
+        "GLOBAL_DAILY_PAGE_CAP": "20",
+        "PAY_TO": "0x4C1265A4c0e7128aa71513080988dD609f3fDC32"
       },
       "secrets": {
-        "required": ["PAY_TO", "CDP_API_KEY_ID", "CDP_API_KEY_SECRET"]
+        "required": ["CDP_API_KEY_ID", "CDP_API_KEY_SECRET"]
       }
     }
   }

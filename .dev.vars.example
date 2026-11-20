@@ -1,6 +1,6 @@
 # Copy to .dev.vars. Do not commit .dev.vars. These are not production secrets.
-# PAY_TO is the Base address that receives USDC. Swap it later without code changes.
-PAY_TO=0x0000000000000000000000000000000000000001
+# PAY_TO is a public var in wrangler.jsonc. Uncomment to override it locally.
+# PAY_TO=0x4C1265A4c0e7128aa71513080988dD609f3fDC32
 # Only required when FACILITATOR_URL is the Coinbase CDP mainnet facilitator.
 CDP_API_KEY_ID=
 CDP_API_KEY_SECRET=
