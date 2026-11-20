@@ -101,7 +101,7 @@ function makeEnv(facilitator: string, kv: KVNamespace, limit: (key: string) => b
     CAPS: kv,
     RATE_LIMITER: { limit: async ({ key }: { key: string }) => ({ success: limit(key) }) },
     BROWSER: {} as BrowserRun,
-  } as Env;
+  } as unknown as Env;
 }
 
 const home = "<!doctype html><html><body><img src='x.png'></body></html>";

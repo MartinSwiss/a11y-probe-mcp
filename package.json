@@ -27,6 +27,7 @@
     "@x402/extensions": "^2.31.0",
     "agents": "^0.33.0",
     "axe-core": "^4.11.0",
+    "viem": "^2.58.2",
     "zod": "^4.6.7"
   },
   "devDependencies": {
@@ -35,7 +36,6 @@
     "esbuild": "^0.25.0",
     "jsdom": "^27.0.0",
     "typescript": "^5.9.0",
-    "viem": "^2.58.0",
     "vitest": "^3.2.0",
     "wrangler": "^4.50.0"
   }

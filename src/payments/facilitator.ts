@@ -2,11 +2,45 @@ import { generateJwt } from "@coinbase/cdp-sdk/auth";
 import { HTTPFacilitatorClient, x402ResourceServer, type FacilitatorConfig } from "@x402/core/server";
 import { registerExactEvmScheme } from "@x402/evm/exact/server";
 import { bazaarResourceServerExtension } from "@x402/extensions/bazaar";
+import { getAddress, isAddress } from "viem";
 
 const CDP_HOST = "api.cdp.coinbase.com";
 
+export class PayToError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "PayToError";
+  }
+}
+
+/**
+ * Accept an EIP-55 address. Mixed-case values must match their checksum.
+ * All-lowercase and all-uppercase hex are accepted and returned checksummed.
+ * Called at the start of every request so a bad PAY_TO never reaches a scan.
+ */
+export function assertPayTo(value: string): `0x${string}` {
+  if (!isAddress(value)) {
+    throw new PayToError("PAY_TO is not a valid address");
+  }
+  let checksummed: `0x${string}`;
+  try {
+    checksummed = getAddress(value);
+  } catch {
+    throw new PayToError("PAY_TO is not a valid address");
+  }
+  const uniformCase = value === value.toLowerCase() || value === value.toUpperCase();
+  if (!uniformCase && value !== checksummed) {
+    throw new PayToError("PAY_TO checksum is invalid");
+  }
+  return checksummed;
+}
+
 export function payToAddress(value: string): `0x${string}` | undefined {
-  return /^0x[a-fA-F0-9]{40}$/.test(value) ? (value as `0x${string}`) : undefined;
+  try {
+    return assertPayTo(value);
+  } catch {
+    return undefined;
+  }
 }
 
 export function facilitatorConfigFor(env: Env): FacilitatorConfig {

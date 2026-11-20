@@ -5,7 +5,7 @@ import { logPayment } from "./log";
 import { createMcpServer } from "./mcp";
 import { bazaarForHttp, bazaarForTool, pageDescription, reportDescription, siteDescription } from "./payments/bazaar";
 import { charge } from "./payments/gate";
-import { payToAddress } from "./payments/facilitator";
+import { PayToError, assertPayTo, payToAddress } from "./payments/facilitator";
 import { isInputFailure, preflight, readPaidRequest, statusFor, type PaidRequest } from "./preflight";
 import { buildReport } from "./scan/report";
 import { scanPage, scanSite, type ScanDeps } from "./scan/scan";
@@ -31,6 +31,14 @@ export function createApp(options: AppOptions = {}): ExportedHandler<Env> {
 }
 
 async function route(request: Request, env: Env, ctx: ExecutionContext, options: AppOptions): Promise<Response> {
+  try {
+    assertPayTo(env.PAY_TO);
+  } catch (error) {
+    if (error instanceof PayToError) {
+      return json({ error: { code: "payee", message: "PAY_TO is not configured" } }, 503);
+    }
+    throw error;
+  }
   const url = new URL(request.url);
   if (request.method === "OPTIONS" && url.pathname.startsWith("/api/")) {
     return new Response(null, { status: 204, headers: corsHeaders() });

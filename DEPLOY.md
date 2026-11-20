@@ -25,17 +25,20 @@ npx wrangler kv namespace create CAPS
 
 The rate limiter binding (`RATE_LIMITER`, namespace id `1001`, 10 requests per 60 seconds) and the Browser Run binding (`BROWSER`) are declared in the config. They are created with the Worker. No separate purchase.
 
-## 3. Secrets
+## 3. Payee address and secrets
 
-Secrets are not in git. `PAY_TO` is the address that receives USDC. It can later be replaced with a Stripe crypto deposit address without a code change.
+`PAY_TO` is already set in `wrangler.jsonc` for the testnet environment and for `env.production`. It is a public Base address, read from the environment at runtime. You do not set it before the first deploy.
 
-Testnet (default environment, Base Sepolia `eip155:84532`):
+To point settlements at a different wallet, including a future Stripe crypto deposit address, change the `PAY_TO` var in both environments and redeploy, or override just that binding without editing code:
 
 ```sh
 npx wrangler secret put PAY_TO --env=""
+npx wrangler secret put PAY_TO --env production
 ```
 
-Use a testnet address. For the CDP keys on testnet, put any non-empty placeholder if `wrangler dev` warns that the required secrets are missing. The testnet facilitator `https://x402.org/facilitator` does not use them.
+A secret named `PAY_TO` replaces the var of the same name. Do not commit the new value if you use the secret path.
+
+CDP keys are real secrets. The testnet facilitator `https://x402.org/facilitator` does not use them. If `wrangler dev` warns that the required secrets are missing, put placeholders for local testnet only:
 
 ```sh
 printf 'dev' | npx wrangler secret put CDP_API_KEY_ID --env=""
@@ -45,12 +48,11 @@ printf 'dev' | npx wrangler secret put CDP_API_KEY_SECRET --env=""
 Mainnet, only when you are ready to go live (target Monday 30 November 2026). Create a CDP API key at the Coinbase Developer Platform first. Do not commit the values.
 
 ```sh
-npx wrangler secret put PAY_TO --env production
 npx wrangler secret put CDP_API_KEY_ID --env production
 npx wrangler secret put CDP_API_KEY_SECRET --env production
 ```
 
-`env.production` uses `eip155:8453` and `https://api.cdp.coinbase.com/platform/v2/x402`.
+`env.production` uses `eip155:8453` and `https://api.cdp.coinbase.com/platform/v2/x402`. The same `PAY_TO` var applies there.
 
 ## 4. Public info URL
 
@@ -79,7 +81,7 @@ Optional local check before deploy:
 
 ```sh
 cp .dev.vars.example .dev.vars
-# fill PAY_TO and the two CDP placeholders
+# fill the two CDP placeholders; PAY_TO comes from wrangler.jsonc
 npx wrangler dev --env=""
 ```
 
@@ -115,7 +117,7 @@ Glama can launch the stdio entry, which proxies paid calls to the Worker:
 
 When testnet scans and settlements look right:
 
-1. Put the real `PAY_TO` and CDP secrets into `--env production` (step 3).
+1. Put the CDP secrets into `--env production` (step 3). `PAY_TO` is already the public receiving address in that environment.
 2. Set production `INFO_URL` to the public origin.
 3. `npx wrangler deploy --env production`
 4. Repeat the curl checks. A 402 is still not a charge. The first settled call spends test-or-real USDC on Base, so use an amount you accept (0.05 USDC for one page).
@@ -124,4 +126,4 @@ Workers Free includes Browser Run's free daily minutes. The global page cap defa
 
 ## Rollback
 
-`npx wrangler rollback` restores the previous Worker version. It does not restore KV counters or secrets. To stop charges immediately, `npx wrangler secret put PAY_TO` with an address you control and redeploy, or delete the route in the dashboard.
+`npx wrangler rollback` restores the previous Worker version. It does not restore KV counters or secrets. To stop charges immediately, override `PAY_TO` with `npx wrangler secret put PAY_TO` using an address you control, or delete the route in the dashboard.
