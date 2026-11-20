@@ -208,11 +208,20 @@ interface DohResponse {
 }
 
 /**
+ * Call the runtime fetch with its own receiver. Putting the global `fetch` on
+ * an object and calling it as a method throws in workerd
+ * (`Illegal invocation`).
+ */
+export function boundFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  return fetch(input, init);
+}
+
+/**
  * Resolve A and AAAA records through Cloudflare DNS-over-HTTPS. Fail closed.
  * Workers accept only "follow" and "manual" for redirect. "manual" keeps a 3xx
  * from being chased, and a non-OK status (including 3xx) is rejected below.
  */
-export async function resolveWithDoh(hostname: string, fetchImpl: typeof fetch = fetch): Promise<string[]> {
+export async function resolveWithDoh(hostname: string, fetchImpl: typeof fetch = boundFetch): Promise<string[]> {
   const addresses: string[] = [];
   for (const type of ["A", "AAAA"] as const) {
     const endpoint = `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(hostname)}&type=${type}`;

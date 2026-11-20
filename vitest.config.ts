@@ -9,8 +9,8 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["test/**/*.test.ts"],
-    exclude: ["**/node_modules/**", "**/dist/**", "test/workers/**"],
+    include: ["test/**/*.test.ts", "test/workers/**/*.dev.ts"],
+    exclude: ["**/node_modules/**", "**/dist/**", "test/workers/**/*.test.ts"],
     testTimeout: 30_000,
     hookTimeout: 30_000,
   },
