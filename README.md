@@ -1,29 +1,74 @@
 # A11y Probe
 
-Paid WCAG accessibility scans for AI agents. Automated checks find roughly 57% of WCAG issues.
+Paid WCAG scans for AI agents. A Cloudflare Worker exposes an MCP server at `/mcp` and the same calls over HTTP. Callers pay per call with x402 (USDC on Base). Automated checks find roughly 57% of WCAG issues. A report is a template: not legal advice, no compliance guarantee.
 
-This repository starts with the scan engine: URL checks, `robots.txt`, a Browser Run loader, and the rule engine that turns a page into a violation list. The MCP server, x402 payments, and the public site land in follow-up pull requests. Nothing here is deployed.
+Our code is MIT. The unmodified `axe-core` dependency is MPL-2.0 (see [NOTICE](NOTICE)). The product name does not use that dependency's name.
 
-## What a scan returns
+Nothing in this repository is deployed. [DEPLOY.md](DEPLOY.md) is the owner's checklist.
 
-A page result counts violations by impact and lists each rule with its WCAG tags, help link, node count, up to three selectors, and an HTML snippet cut at 200 characters. A site scan stays on the start origin, stops at 10 pages, and aggregates the same rules. Reports are filled-in Markdown templates in German, French, or English. They are not legal advice and they are not a compliance guarantee.
+## Prices
 
-Prices live in [`src/config.ts`](src/config.ts):
+Set in [`src/config.ts`](src/config.ts):
 
-| Call | USD |
-| --- | ---: |
-| `get_pricing` | 0 |
-| `scan_page` | 0.05 |
-| `scan_site` | 0.50 |
-| `report` | 1.00 |
+| Call | USD | Route |
+| --- | ---: | --- |
+| `get_pricing` | 0 | `GET /api/v1/pricing` |
+| `scan_page` | 0.05 | `POST /api/v1/scan/page` |
+| `scan_site` | 0.50 | `POST /api/v1/scan/site` |
+| `report` | 1.00 | `POST /api/v1/report` |
 
-## Safety
+The home page states the same numbers, how a 402 is paid, and the limits. Draft terms, privacy, and imprint are under `/legal`. Terms are under Swiss law and cap liability for a paid call at the amount paid for that call. The privacy notice names Cloudflare and Coinbase as processors in the United States.
 
-Only `http` and `https` on ports 80 and 443 are fetched. IP literals, loopback, link-local, private, and metadata hosts are rejected, including after each redirect (five hops maximum). Hostnames are resolved before the fetch and rejected when any answer is non-public. `robots.txt` is read for `A11yProbe/1.0` and for `*`. A disallowed URL is refused before any document fetch. The caller must set `authorized` to `true`. The engine does not log in, send cookies, or submit forms.
+## Demo
 
-The Browser Run loader is [`src/scan/browser.ts`](src/scan/browser.ts). Wrangler sets `keep_names` to `false` because the rule engine builds its injectable source with `Function#toString()`, and esbuild's name helper throws when that string runs in the page.
+Against a local `npx wrangler dev` (see [DEPLOY.md](DEPLOY.md)) or a deployed origin:
 
-The rule engine dependency is unmodified `axe-core` (MPL-2.0). See [NOTICE](NOTICE). Our code is MIT.
+```sh
+ORIGIN=http://127.0.0.1:8787
+
+curl -s "$ORIGIN/api/v1/pricing"
+
+curl -s -D - -o /tmp/a11y-402.json -X POST "$ORIGIN/api/v1/scan/page" \
+  -H 'content-type: application/json' \
+  -d '{"url":"https://example.com/","authorized":true}'
+```
+
+The second call is **402** with a `payment-required` header when the URL is allowed. It does not settle. A client that understands x402 signs USDC on Base Sepolia (`eip155:84532` in the default config) and retries with `PAYMENT-SIGNATURE`. Settlement happens only after the scan succeeds.
+
+Blocked cases never return 402:
+
+- `authorized` is not `true`
+- the URL is not public http(s) on port 80 or 443
+- `robots.txt` disallows `A11yProbe/1.0` or `*`
+- 10 paid calls in a minute for that payer or IP
+- 50 pages today for that domain, or the global daily cap
+
+Try the MCP endpoint with MCP Inspector:
+
+```sh
+npx @modelcontextprotocol/inspector
+```
+
+Connect to `$ORIGIN/mcp` over Streamable HTTP. `get_pricing` is free. Paid tools advertise their price and the x402 Bazaar schema.
+
+A local stdio process for Glama proxies the paid tools. `get_pricing` runs without a network:
+
+```sh
+A11Y_PROBE_URL=https://<your-worker> node --experimental-strip-types src/stdio.ts
+```
+
+## Configuration
+
+| Name | Where | Purpose |
+| --- | --- | --- |
+| `PAY_TO` | secret | USDC deposit address. Swap it, including for a Stripe crypto address, without a code change. |
+| `X402_NETWORK` | var | `eip155:84532` (Base Sepolia) by default. `eip155:8453` in `env.production`. |
+| `FACILITATOR_URL` | var | `https://x402.org/facilitator` for tests. CDP `https://api.cdp.coinbase.com/platform/v2/x402` in production. |
+| `CDP_API_KEY_ID`, `CDP_API_KEY_SECRET` | secrets | CDP JWT auth for the mainnet facilitator only. |
+| `INFO_URL` | var | Public origin used in the user agent and legal links. |
+| `GLOBAL_DAILY_PAGE_CAP` | var | Default 20, to stay inside Browser Run's free daily minutes. |
+
+`server.json` publishes the server as `io.github.MartinSwiss/a11y-probe-mcp`. Fill in `{host}` after deploy, then publish. Do not publish before the Worker answers.
 
 ## Develop
 
@@ -34,18 +79,4 @@ npm test
 npm run typecheck
 ```
 
-## Worker
-
-`POST /mcp` is a stateless MCP server (Streamable HTTP). The same tools are on `GET /api/v1/pricing` and `POST /api/v1/scan/page`, `/api/v1/scan/site`, and `/api/v1/report`.
-
-Paid calls use x402 (USDC). The default Worker config is Base Sepolia (`eip155:84532`, facilitator `https://x402.org/facilitator`). The `production` environment is Base mainnet (`eip155:8453`) and the Coinbase CDP facilitator, which needs `CDP_API_KEY_ID` and `CDP_API_KEY_SECRET`. `PAY_TO` is the deposit address and is read from the environment, so it can later be swapped for a Stripe crypto address without a code change.
-
-A scan that fails the SSRF check, `robots.txt`, the 10 calls/minute limiter, or a daily page cap is rejected before a 402. The facilitator settles only after the scan succeeds. Logs contain the timestamp, tool, price, transaction hash, payer address, and SHA-256 of the domain.
-
-```sh
-cp .dev.vars.example .dev.vars
-# set PAY_TO, then:
-npx wrangler dev
-```
-
-Do not put real keys or a funded address in the repo. Nothing in this repository is deployed.
+Tests do not spend USDC. Payment tests use a local facilitator and a throwaway signing key.

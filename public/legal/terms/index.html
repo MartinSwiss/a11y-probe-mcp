@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Terms of use (draft) — A11y Probe</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <a class="skip" href="#content">Skip to content</a>
+    <header>
+      <p><a href="/">A11y Probe</a></p>
+      <h1>Terms of use</h1>
+    </header>
+    <main id="content">
+      <p class="banner"><strong>Draft.</strong> For the owner and counsel to review before publication. Not yet in force. This page is not legal advice.</p>
+      <section>
+        <h2>1. Provider and contract</h2>
+        <p>These terms govern use of A11y Probe, an automated accessibility scan offered to software agents and other callers. The provider is the person named in the <a href="/legal/imprint">imprint</a>. The contract for a paid call is formed when that call is settled. Swiss law applies, excluding its conflict-of-law rules. The place of jurisdiction is the courts of [canton of the provider's registered office], subject to mandatory venues.</p>
+        <h2>2. The service</h2>
+        <p>The service runs automated checks against a public URL the caller marks with <code>authorized: true</code>. Automated checks find roughly 57% of WCAG issues. Results and the Markdown report are technical output. They are not legal advice and they are not a compliance guarantee. The service does not log in, store page content, or submit forms.</p>
+        <h2>3. Price and payment</h2>
+        <p>Prices are the USD amounts returned by <code>get_pricing</code> and shown on the home page. Payment is in USDC on Base via the x402 protocol, to the <code>PAY_TO</code> address configured for the deployment. A call that is rejected before a payment challenge (for example because of <code>robots.txt</code>, a blocked URL, a rate limit, or a daily cap) is free. A call is charged only after the scan succeeds.</p>
+        <h2>4. Acceptable use</h2>
+        <p>The caller confirms they may scan the URL. The caller must not use the service to probe private networks, to bypass access controls, or to overwhelm a third-party site. The provider may refuse a call that fails those checks.</p>
+        <h2>5. Liability</h2>
+        <p>Liability for a paid call is capped at the amount paid for that call. The provider is not liable for indirect or consequential loss, lost profit, or for decisions made in reliance on a scan. Mandatory liability under Swiss law, including for unlawful intent or gross negligence where it cannot be limited, is unaffected.</p>
+        <h2>6. Changes</h2>
+        <p>The provider may update these terms for future calls by publishing a new version at this URL. A call that has already settled keeps the terms in force at settlement.</p>
+      </section>
+    </main>
+    <footer>
+      <p><a href="/legal/privacy">Privacy</a> · <a href="/legal/imprint">Imprint</a></p>
+    </footer>
+  </body>
+</html>

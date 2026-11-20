@@ -10,6 +10,7 @@
     "exactOptionalPropertyTypes": false,
     "skipLibCheck": true,
     "noEmit": true,
+    "allowImportingTsExtensions": true,
     "isolatedModules": true,
     "verbatimModuleSyntax": false,
     "forceConsistentCasingInFileNames": true,
