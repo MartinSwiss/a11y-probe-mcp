@@ -1,0 +1,8 @@
+{
+  "name": "a11y-probe-doh-test",
+  "main": "./entry.ts",
+  // The pool's workerd build supports dates through 2026-01-20. That runtime
+  // still rejects redirect: "error", which is the production failure.
+  "compatibility_date": "2026-01-20",
+  "compatibility_flags": ["nodejs_compat"]
+}

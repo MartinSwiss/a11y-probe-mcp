@@ -13,6 +13,7 @@
   },
   "scripts": {
     "test": "vitest run",
+    "test:workers": "vitest run --config vitest.workers.config.ts",
     "typecheck": "tsc --noEmit",
     "cf-typegen": "wrangler types"
   },
@@ -29,6 +30,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.12.6",
     "@types/jsdom": "^27.0.0",
     "esbuild": "^0.25.0",
     "jsdom": "^27.0.0",
