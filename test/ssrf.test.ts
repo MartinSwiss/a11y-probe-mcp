@@ -192,6 +192,16 @@ describe("SSRF guard", () => {
     };
     await expect(resolveWithDoh("dns.google", fetchImpl)).resolves.toEqual(["8.8.8.8", "2001:4860:4860::8888"]);
   });
+
+  it("asks for a manual DoH redirect and fails closed instead of following it", async () => {
+    const seen: Array<RequestRedirect | undefined> = [];
+    const fetchImpl: typeof fetch = async (_input, init) => {
+      seen.push(init?.redirect);
+      return new Response(null, { status: 302, headers: { location: "http://169.254.169.254/latest" } });
+    };
+    await expect(resolveWithDoh("example.com", fetchImpl)).rejects.toThrow(/dns lookup failed/);
+    expect(seen).toEqual(["manual"]);
+  });
 });
 
 describe("keep_names", () => {

@@ -207,17 +207,24 @@ interface DohResponse {
   Answer?: DohAnswer[];
 }
 
-/** Resolve A and AAAA records through Cloudflare DNS-over-HTTPS. Fail closed. */
+/**
+ * Resolve A and AAAA records through Cloudflare DNS-over-HTTPS. Fail closed.
+ * Workers accept only "follow" and "manual" for redirect. "manual" keeps a 3xx
+ * from being chased, and a non-OK status (including 3xx) is rejected below.
+ */
 export async function resolveWithDoh(hostname: string, fetchImpl: typeof fetch = fetch): Promise<string[]> {
   const addresses: string[] = [];
   for (const type of ["A", "AAAA"] as const) {
     const endpoint = `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(hostname)}&type=${type}`;
     const response = await fetchImpl(endpoint, {
       method: "GET",
-      redirect: "error",
+      redirect: "manual",
       headers: { accept: "application/dns-json" },
     });
-    if (!response.ok) throw new Error("dns lookup failed");
+    if (!response.ok || response.type === "opaqueredirect") {
+      await response.body?.cancel().catch(() => undefined);
+      throw new Error("dns lookup failed");
+    }
     const body = (await response.json()) as DohResponse;
     if (body.Status !== 0) throw new Error("dns lookup failed");
     for (const answer of body.Answer ?? []) {
