@@ -22,8 +22,8 @@
   },
   // Landing page and /legal. `wrangler deploy` uploads ./public with the Worker.
   // Paths outside run_worker_first are served from the ASSETS binding.
-  // a11y.aiagentpay.cloud is already attached to this Worker. It is not
-  // listed under routes, so a deploy does not rebind the custom domain.
+  // This top-level config is testnet and stays on workers.dev. The custom
+  // domain is declared only under env.production.
   "assets": {
     "directory": "./public",
     "binding": "ASSETS",
@@ -68,6 +68,10 @@
   "env": {
     "production": {
       "preview_urls": false,
+      "workers_dev": false,
+      "routes": [
+        { "pattern": "a11y.aiagentpay.cloud", "custom_domain": true }
+      ],
       "assets": {
         "directory": "./public",
         "binding": "ASSETS",
@@ -88,11 +92,11 @@
           }
         }
       ],
-      // Still a placeholder. Create a production namespace before the first mainnet deploy.
+      // Daily page counters for Base mainnet. Separate from the testnet namespace.
       "kv_namespaces": [
         {
           "binding": "CAPS",
-          "id": "00000000000000000000000000000000"
+          "id": "21c1d97792aa46ca8fa62dfa1f720b43"
         }
       ],
       "vars": {
