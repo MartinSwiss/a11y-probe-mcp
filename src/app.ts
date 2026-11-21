@@ -1,9 +1,12 @@
 import { createMcpHandler } from "agents/mcp/server";
-import { getPricing, PRICES_USD, userAgent } from "./config";
+import { checkContrast } from "./check/contrast";
+import { checkLinksMeta } from "./check/links";
+import { LIMITS, getPricing, PRICES_USD, userAgent } from "./config";
+import { hashDomain } from "./domain";
 import { commitPages, clientKey, kvCapStore, bindingLimiter } from "./limits";
 import { logPayment } from "./log";
 import { createMcpServer } from "./mcp";
-import { bazaarForHttp, bazaarForTool, pageDescription, reportDescription, siteDescription } from "./payments/bazaar";
+import { bazaarForHttp, bazaarForTool, contrastDescription, linksDescription, pageDescription, reportDescription, siteDescription } from "./payments/bazaar";
 import { charge } from "./payments/gate";
 import { PayToError, assertPayTo, payToAddress } from "./payments/facilitator";
 import { isInputFailure, preflight, readPaidRequest, statusFor, type InputFailure, type PaidRequest } from "./preflight";
@@ -20,7 +23,7 @@ export interface AppOptions {
   now?: () => Date;
 }
 
-const PAID = new Set(["scan_page", "scan_site", "report"]);
+const PAID = new Set(["scan_page", "scan_site", "report", "check_contrast", "check_links_meta"]);
 
 export function createApp(options: AppOptions = {}): ExportedHandler<Env> {
   return {
@@ -47,6 +50,12 @@ async function route(request: Request, env: Env, ctx: ExecutionContext, options:
   if (url.pathname === "/api/v1/pricing" && request.method === "GET") {
     return json(getPricing({ infoUrl: env.INFO_URL, globalDailyPageCap: numberCap(env) }), 200);
   }
+  if (url.pathname === "/api/v1/check/contrast" && request.method === "POST") {
+    return handleHttp(request, env, options, "check_contrast");
+  }
+  if (url.pathname === "/api/v1/check/links-meta" && request.method === "POST") {
+    return handleHttp(request, env, options, "check_links_meta");
+  }
   if (url.pathname === "/api/v1/scan/page" && request.method === "POST") {
     return handleHttp(request, env, options, "scan_page");
   }
@@ -67,23 +76,42 @@ async function handleHttp(request: Request, env: Env, options: AppOptions, tool:
   const body = await readJsonBody(request);
   const parsed = body.json ? readPaidRequest(tool, body.args) : inputFailure("JSON object body is required");
 
-  // An unpaid probe (empty body, or no authorized:true) gets the payment
-  // challenge before consent is checked. A paid call still needs consent,
-  // and that refusal happens before verify or settle.
-  if (!token && (!body.json || (isInputFailure(parsed) && parsed.code === "unauthorized"))) {
-    return paymentChallenge(request, env, tool, null);
-  }
+  // An unpaid probe (empty body, missing consent, or a contrast body the
+  // indexer has not filled in) gets the payment challenge before any check
+  // that would reject it. A paid call still needs a valid body, and consent
+  // where a third-party URL is involved, before verify or settle.
+  const unpaidProbe =
+    !token &&
+    (!body.json ||
+      (isInputFailure(parsed) && (parsed.code === "unauthorized" || tool === "check_contrast")));
+  if (unpaidProbe) return paymentChallenge(request, env, tool, null);
   if (isInputFailure(parsed)) return json({ error: { code: parsed.code, message: parsed.message } }, parsed.status);
 
   const limited = await limit(request, env, token);
   if (limited) return limited;
 
   const deps = scanDependencies(env, options);
-  const ready = await preflight(parsed, deps, kvCapStore(env.CAPS), numberCap(env));
-  if (!ready.ok) return json({ error: { code: ready.code, message: ready.message } }, ready.status);
+  if (parsed.tool !== "check_contrast") {
+    const ready = await preflight(parsed, deps, kvCapStore(env.CAPS), numberCap(env));
+    if (!ready.ok) return json({ error: { code: ready.code, message: ready.message } }, ready.status);
+    if (!token) return paymentChallenge(request, env, tool, null);
+    return finishPaid(request, env, tool, token, deps, ready.domainHash, parsed);
+  }
 
   if (!token) return paymentChallenge(request, env, tool, null);
+  return finishPaid(request, env, tool, token, deps, await hashDomain("check_contrast"), parsed);
 
+}
+
+async function finishPaid(
+  request: Request,
+  env: Env,
+  tool: PaidRequest["tool"],
+  token: string,
+  deps: ReturnType<typeof scanDependencies>,
+  domainHash: string,
+  parsed: PaidRequest,
+): Promise<Response> {
   const charged = await charge(env, {
     price: PRICES_USD[tool],
     resourceUrl: new URL(request.url).href,
@@ -101,14 +129,14 @@ async function handleHttp(request: Request, env: Env, options: AppOptions, tool:
   if (!settled.ok) return json(settled.body, settled.status);
 
   const now = deps.now?.() ?? new Date();
-  await commitPages(kvCapStore(env.CAPS), ready.domainHash, outcome.pages, now);
+  if (outcome.pages > 0) await commitPages(kvCapStore(env.CAPS), domainHash, outcome.pages, now);
   logPayment({
     timestamp: now.toISOString(),
     tool,
     price: PRICES_USD[tool],
     tx: settled.settlement.transaction,
     payer: settled.settlement.payer,
-    domainHash: ready.domainHash,
+    domainHash,
   });
   const headers = new Headers({ "payment-response": btoa(JSON.stringify(settled.settlement)) });
   const payload = "markdown" in outcome ? { markdown: outcome.markdown } : outcome.result;
@@ -130,6 +158,8 @@ async function readJsonBody(request: Request): Promise<{ json: true; args: unkno
 }
 
 function descriptionFor(tool: PaidRequest["tool"]): string {
+  if (tool === "check_contrast") return contrastDescription();
+  if (tool === "check_links_meta") return linksDescription();
   if (tool === "scan_page") return pageDescription();
   if (tool === "scan_site") return siteDescription();
   return reportDescription();
@@ -162,11 +192,19 @@ async function handleMcp(request: Request, env: Env, ctx: ExecutionContext, opti
     const limited = await limit(request, env, token);
     if (limited) return limited;
     const paid = readPaidRequest(tool, parsed?.params?.arguments);
-    if (isInputFailure(paid)) return rpcError(parsed?.id, paid.status, paid.message);
-    pages = paid.pages;
-    const ready = await preflight(paid, scanDependencies(env, options), kvCapStore(env.CAPS), numberCap(env));
-    if (!ready.ok) return rpcError(parsed?.id, ready.status, ready.message);
-    domainHash = ready.domainHash;
+    const unpaidProbe = !token && isInputFailure(paid) && (paid.code === "unauthorized" || tool === "check_contrast");
+    if (!unpaidProbe) {
+      if (isInputFailure(paid)) return rpcError(parsed?.id, paid.status, paid.message);
+      if (paid.tool === "check_contrast") {
+        domainHash = await hashDomain("check_contrast");
+        pages = 0;
+      } else {
+        pages = paid.pages;
+        const ready = await preflight(paid, scanDependencies(env, options), kvCapStore(env.CAPS), numberCap(env));
+        if (!ready.ok) return rpcError(parsed?.id, ready.status, ready.message);
+        domainHash = ready.domainHash;
+      }
+    }
   }
 
   let handler;
@@ -236,9 +274,9 @@ async function decorateToolResult(
     error.extensions = { ...error.extensions, ...bazaarForTool(context.tool as "scan_page") };
   }
   const receipt = meta["x402/payment-response"] as { success?: boolean; transaction?: string; payer?: string } | undefined;
-  if (receipt?.success && receipt.transaction && !record.result?.isError) {
+    if (receipt?.success && receipt.transaction && !record.result?.isError) {
     const delivered = pagesDelivered(record.result?.content?.[0]?.text, context.pages);
-    await commitPages(kvCapStore(context.env.CAPS), context.domainHash, delivered, context.now);
+    if (delivered > 0) await commitPages(kvCapStore(context.env.CAPS), context.domainHash, delivered, context.now);
     logPayment({
       timestamp: context.now.toISOString(),
       tool: context.tool,
@@ -266,6 +304,25 @@ async function runPaid(
   request: PaidRequest,
   deps: ScanDeps,
 ): Promise<{ ok: true; result?: unknown; markdown?: string; pages: number } | { ok: false; code: string; message: string }> {
+  if (request.tool === "check_contrast") {
+    const outcome = checkContrast({
+      pairs: request.pairs,
+      ...(request.fontSizePx !== undefined ? { fontSizePx: request.fontSizePx } : {}),
+      ...(request.bold !== undefined ? { bold: request.bold } : {}),
+    });
+    if (!outcome.ok) return { ok: false, code: "invalid_input", message: outcome.message };
+    return { ok: true, result: outcome.result, pages: 0 };
+  }
+  if (request.tool === "check_links_meta") {
+    const outcome = await checkLinksMeta(request.url, {
+      fetch: deps.fetch,
+      resolveAddresses: deps.resolveAddresses,
+      userAgent: deps.userAgent,
+      signal: AbortSignal.timeout(LIMITS.pageTimeoutMs),
+    });
+    if (!outcome.ok) return outcome;
+    return { ok: true, result: outcome.result, pages: 1 };
+  }
   if (request.tool === "scan_page") {
     const outcome = await scanPage(
       { url: request.url, authorized: true, ...(request.standard ? { standard: request.standard } : {}) },

@@ -331,6 +331,73 @@ describe("x402 payments", () => {
     expect(facilitator.calls.filter((entry) => entry.path === "/verify")).toHaveLength(verifies);
   });
 
+  it("returns 402 for unpaid contrast and link probes, and does not settle a link check without consent", async () => {
+    const env = makeEnv(facilitator.url, memoryKv());
+    const app = createApp({
+      fetchImpl: pageFetch(),
+      resolveAddresses: publicDns(),
+      inspect: inspectOk(),
+    });
+    const contrast = await call(
+      app,
+      new Request("https://a11y-probe.example/api/v1/check/contrast", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "",
+      }),
+      env,
+    );
+    expect(contrast.status).toBe(402);
+    const contrastBody = (await contrast.json()) as PaymentRequired & {
+      accepts?: Array<{ amount?: string }>;
+      extensions?: { bazaar?: { info?: { input?: { method?: string; body?: { pairs?: unknown[] } } } } };
+    };
+    expect(contrast.headers.get("payment-required")).toBeTruthy();
+    expect(contrastBody.accepts?.[0]?.amount).toBe("10000");
+    expect(contrastBody.extensions?.bazaar?.info?.input?.method).toBe("POST");
+    expect(contrastBody.extensions?.bazaar?.info?.input?.body?.pairs?.length).toBeGreaterThan(0);
+
+    const links = await call(
+      app,
+      new Request("https://a11y-probe.example/api/v1/check/links-meta", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ url: "https://example.com/" }),
+      }),
+      env,
+    );
+    expect(links.status).toBe(402);
+    expect(links.headers.get("payment-required")).toBeTruthy();
+
+    const challenge = await call(
+      app,
+      new Request("https://a11y-probe.example/api/v1/check/links-meta", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ url: "https://example.com/", authorized: true }),
+      }),
+      env,
+    );
+    const required = (await challenge.json()) as PaymentRequired;
+    const { client } = await paymentClient();
+    const payload = await client.createPaymentPayload(required);
+    const settles = facilitator.calls.filter((entry) => entry.path === "/settle").length;
+    const refused = await call(
+      app,
+      new Request("https://a11y-probe.example/api/v1/check/links-meta", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "payment-signature": btoa(JSON.stringify(payload)),
+        },
+        body: JSON.stringify({ url: "https://example.com/" }),
+      }),
+      env,
+    );
+    expect(refused.status).toBe(400);
+    expect(facilitator.calls.filter((entry) => entry.path === "/settle")).toHaveLength(settles);
+  });
+
   it("rejects a cap and a rate limit before payment", async () => {
     const domainHash = await hashDomain("example.com");
     const kv = memoryKv({ [`domain:2026-11-18:${domainHash}`]: "50" });

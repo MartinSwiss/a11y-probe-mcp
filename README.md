@@ -13,7 +13,9 @@ Set in [`src/config.ts`](src/config.ts):
 | Call | USD | Route |
 | --- | ---: | --- |
 | `get_pricing` | 0 | `GET /api/v1/pricing` |
+| `check_contrast` | 0.01 | `POST /api/v1/check/contrast` |
 | `scan_page` | 0.05 | `POST /api/v1/scan/page` |
+| `check_links_meta` | 0.05 | `POST /api/v1/check/links-meta` |
 | `scan_site` | 0.50 | `POST /api/v1/scan/site` |
 | `report` | 1.00 | `POST /api/v1/report` |
 

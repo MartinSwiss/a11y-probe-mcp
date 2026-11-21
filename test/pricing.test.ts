@@ -5,7 +5,9 @@ describe("pricing", () => {
   it("keeps the published prices in one config object", () => {
     expect(PRICES_USD).toEqual({
       get_pricing: 0,
+      check_contrast: 0.01,
       scan_page: 0.05,
+      check_links_meta: 0.05,
       scan_site: 0.5,
       report: 1,
     });

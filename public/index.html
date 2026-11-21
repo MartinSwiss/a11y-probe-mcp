@@ -48,9 +48,19 @@
               <td>Prices, limits, and links to the terms and privacy notice.</td>
             </tr>
             <tr>
+              <th scope="row"><code>check_contrast</code></th>
+              <td>0.01</td>
+              <td>Up to 50 color pairs. No page is fetched. No <code>authorized</code> flag.</td>
+            </tr>
+            <tr>
               <th scope="row"><code>scan_page</code></th>
               <td>0.05</td>
               <td>One public page. Default standard <code>wcag22aa</code>.</td>
+            </tr>
+            <tr>
+              <th scope="row"><code>check_links_meta</code></th>
+              <td>0.05</td>
+              <td>One public page: title, meta, language, and up to 50 links on that page. No further crawl.</td>
             </tr>
             <tr>
               <th scope="row"><code>scan_site</code></th>
@@ -69,7 +79,7 @@
       <section id="pay">
         <h2>How to pay</h2>
         <ol>
-          <li>Call the tool or <code>POST</code> the matching <code>/api/v1</code> route. Set <code>authorized</code> to <code>true</code>.</li>
+          <li>Call the tool or <code>POST</code> the matching <code>/api/v1</code> route. Page and link checks set <code>authorized</code> to <code>true</code>. Contrast checks do not.</li>
           <li>If the URL is allowed, the response is <strong>402</strong> with a <code>PAYMENT-REQUIRED</code> header: network, amount, and the <code>PAY_TO</code> address.</li>
           <li>The caller signs an x402 USDC payment on Base Sepolia for tests, or Base for production, and retries with <code>PAYMENT-SIGNATURE</code>.</li>
           <li>The scan runs. The facilitator settles only after it succeeds. The response includes <code>PAYMENT-RESPONSE</code>.</li>

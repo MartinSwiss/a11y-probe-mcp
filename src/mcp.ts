@@ -1,9 +1,11 @@
 import { McpServer } from "@modelcontextprotocol/server";
 import { withX402 } from "agents/x402";
 import { z } from "zod";
-import { getPricing, PRICES_USD, REPORT_LANGUAGES, STANDARDS } from "./config";
+import { checkContrast } from "./check/contrast";
+import { checkLinksMeta } from "./check/links";
+import { LIMITS, getPricing, PRICES_USD, REPORT_LANGUAGES, STANDARDS } from "./config";
 import { assertPayTo, facilitatorConfigFor } from "./payments/facilitator";
-import { pageDescription, reportDescription, siteDescription } from "./payments/bazaar";
+import { contrastDescription, linksDescription, pageDescription, reportDescription, siteDescription } from "./payments/bazaar";
 import { buildReport } from "./scan/report";
 import { scanPage, scanSite, type ScanDeps } from "./scan/scan";
 
@@ -34,6 +36,57 @@ export function createMcpServer(env: Env, deps: ScanDeps): McpServer {
         },
       ],
     }),
+  );
+
+  server.paidTool(
+    "check_contrast",
+    contrastDescription(),
+    PRICES_USD.check_contrast,
+    {
+      pairs: z
+        .array(
+          z.object({
+            foreground: z.string(),
+            background: z.string(),
+            fontSizePx: z.number().positive().optional(),
+            bold: z.boolean().optional(),
+          }),
+        )
+        .min(1)
+        .max(50),
+      fontSizePx: z.number().positive().optional(),
+      bold: z.boolean().optional(),
+    },
+    { readOnlyHint: true },
+    async (args) => {
+      const outcome = checkContrast({
+        pairs: args.pairs,
+        ...(args.fontSizePx !== undefined ? { fontSizePx: args.fontSizePx } : {}),
+        ...(args.bold !== undefined ? { bold: args.bold } : {}),
+      });
+      if (!outcome.ok) return { isError: true, content: [{ type: "text" as const, text: outcome.message }] };
+      return { content: [{ type: "text" as const, text: JSON.stringify(outcome.result) }] };
+    },
+  );
+
+  server.paidTool(
+    "check_links_meta",
+    linksDescription(),
+    PRICES_USD.check_links_meta,
+    {
+      url: z.string().url().describe("Public http or https URL."),
+      authorized,
+    },
+    { readOnlyHint: true },
+    async (args) => {
+      const outcome = await checkLinksMeta(args.url, {
+        fetch: deps.fetch,
+        resolveAddresses: deps.resolveAddresses,
+        userAgent: deps.userAgent,
+        signal: AbortSignal.timeout(LIMITS.pageTimeoutMs),
+      });
+      return toolResult(outcome);
+    },
   );
 
   server.paidTool(
