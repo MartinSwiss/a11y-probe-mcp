@@ -11,13 +11,7 @@
   "remotes": [
     {
       "type": "streamable-http",
-      "url": "https://{host}/mcp",
-      "variables": {
-        "host": {
-          "description": "Hostname of the deployed Worker. Set this after deploy, before publishing.",
-          "isRequired": true
-        }
-      }
+      "url": "https://a11y.aiagentpay.cloud/mcp"
     }
   ]
 }
