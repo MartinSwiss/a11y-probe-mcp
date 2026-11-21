@@ -17,13 +17,10 @@ npx wrangler login
 
 ## 2. Counters
 
-Daily page caps use one KV namespace per environment. The testnet binding (`CAPS` on the top-level config) is `10c7bfb486484f00b9fe8719a1f38f63`. Leave that id as it is.
+Daily page caps use one KV namespace per environment. Both already exist. Do not swap them.
 
-`env.production` still has the placeholder id `00000000000000000000000000000000`. Before the first mainnet deploy, create a separate namespace and paste that id into the production block only:
-
-```sh
-npx wrangler kv namespace create CAPS
-```
+- Testnet (`CAPS` on the top-level config): `10c7bfb486484f00b9fe8719a1f38f63`
+- Production (`env.production`): `21c1d97792aa46ca8fa62dfa1f720b43`
 
 The rate limiter binding (`RATE_LIMITER`, namespace id `1001`, 10 requests per 60 seconds) and the Browser Run binding (`BROWSER`) are declared in the config. They are created with the Worker. No separate purchase.
 
@@ -42,7 +39,7 @@ A secret named `PAY_TO` replaces the var of the same name. Do not commit the new
 
 CDP keys are real secrets, and only the mainnet facilitator uses them. The top-level testnet config does not list `CDP_API_KEY_ID` or `CDP_API_KEY_SECRET` as required. Do not put placeholder CDP secrets on the testnet Worker.
 
-Mainnet, only when you are ready to go live (target Monday 30 November 2026). Create a CDP API key at the Coinbase Developer Platform first. Do not commit the values. `env.production` still requires both secrets.
+Production requires both secrets. They are set with Wrangler and are not in the repo. To set or rotate them:
 
 ```sh
 npx wrangler secret put CDP_API_KEY_ID --env production
@@ -61,19 +58,18 @@ npx wrangler secret put CDP_API_KEY_SECRET --env production
 npx wrangler deploy --env=""
 ```
 
-`--env=""` is the top-level testnet config. A bare `wrangler deploy` warns when named environments exist. This command uploads the Worker and the `public/` assets (home page, 404 page, and `/legal`), because `assets.directory` is set. `/mcp` and `/api/*` still run the Worker first. The custom domain `a11y.aiagentpay.cloud` is already attached and is not declared under `routes`.
+`--env=""` is the top-level testnet config. A bare `wrangler deploy` warns when named environments exist. This command uploads the Worker and the `public/` assets (home page, 404 page, and `/legal`), because `assets.directory` is set. `/mcp` and `/api/*` still run the Worker first. The top-level config does not declare `a11y.aiagentpay.cloud` and does not set `workers_dev`, so testnet stays on the `workers.dev` hostname this command prints. The custom domain belongs to `env.production` only.
 
-Then:
+Then set `ORIGIN` to that `workers.dev` URL:
 
 ```sh
-ORIGIN=https://a11y.aiagentpay.cloud
 curl -s "$ORIGIN/api/v1/pricing"
 curl -s -D - -o /dev/null -X POST "$ORIGIN/api/v1/scan/page" \
   -H 'content-type: application/json' \
   -d '{"url":"https://example.com/","authorized":true}'
 ```
 
-The scan request should be **402** with a `payment-required` header, not a charge. Confirm `/`, `/legal/terms`, `/legal/privacy`, and `/legal/imprint` load. The imprint names Martin Ma. The legal pages stay marked draft until counsel reviews them. `preview_urls` is false, so this deploy does not create a version preview URL. `workers.dev` is unchanged.
+The scan request should be **402** with a `payment-required` header, not a charge. `preview_urls` is false, so this deploy does not create a version preview URL. `workers.dev` on this environment is unchanged. The public site checks are in the production section.
 
 Optional local check before deploy:
 
@@ -109,17 +105,42 @@ Connect it to `https://a11y.aiagentpay.cloud/mcp` with Streamable HTTP. `get_pri
 
 `get_pricing` works without `A11Y_PROBE_URL`. Paid tools do not.
 
-## 8. Mainnet
+## 8. Production
 
-When testnet scans and settlements look right:
+Production is live on Base (`eip155:8453`). `PAY_TO` and `INFO_URL` are already in `env.production`. The `CAPS` namespace is `21c1d97792aa46ca8fa62dfa1f720b43`. CDP secrets are already set with `wrangler secret put --env production` (step 3). Redeploy with:
 
-1. Put the CDP secrets into `--env production` (step 3). `PAY_TO` is already the public receiving address in that environment.
-2. Replace the production `CAPS` placeholder with a real namespace id. `INFO_URL` is already `https://a11y.aiagentpay.cloud/`.
-3. `npx wrangler deploy --env production`
-4. Repeat the curl checks. A 402 is still not a charge. The first settled call spends test-or-real USDC on Base, so use an amount you accept (0.05 USDC for one page).
+```sh
+npx wrangler deploy --env production
+```
+
+That command uploads the Worker and `public/` assets, keeps `workers_dev` off for this environment, and attaches the custom domain:
+
+```json
+{ "pattern": "a11y.aiagentpay.cloud", "custom_domain": true }
+```
+
+The top-level testnet config does not include that route. Then:
+
+```sh
+ORIGIN=https://a11y.aiagentpay.cloud
+curl -s "$ORIGIN/api/v1/pricing"
+curl -s -D - -o /dev/null -X POST "$ORIGIN/api/v1/scan/page" \
+  -H 'content-type: application/json' \
+  -d '{"url":"https://example.com/","authorized":true}'
+```
+
+The scan request should be **402** with a `payment-required` header, not a charge. Confirm `/`, `/legal/terms`, `/legal/privacy`, and `/legal/imprint` load. The imprint names Martin Ma. The legal pages stay marked draft until counsel reviews them. A settled call spends USDC on Base, so use an amount you accept (0.05 USDC for one page).
 
 Workers Free includes Browser Run's free daily minutes. The global page cap defaults to 20 so a day of scans stays inside that allowance. Raise `GLOBAL_DAILY_PAGE_CAP` only if you accept Browser Run charges.
 
 ## Rollback
 
-`npx wrangler rollback` restores the previous Worker version. It does not restore KV counters or secrets. To stop charges immediately, override `PAY_TO` with `npx wrangler secret put PAY_TO` using an address you control, or delete the route in the dashboard.
+`npx wrangler rollback --env production` restores the previous production Worker version. It does not restore KV counters, secrets, or the custom domain.
+
+To move `a11y.aiagentpay.cloud` off production and back onto the default Worker:
+
+1. Remove the `routes` block from `env.production` in `wrangler.jsonc`.
+2. Reattach the custom domain to the Worker named `a11y-probe-mcp`.
+3. Deploy production again only after the route is gone, so that deploy does not take the hostname back: `npx wrangler deploy --env production`.
+
+To stop charges immediately, override `PAY_TO` with `npx wrangler secret put PAY_TO --env production` using an address you control. Do not commit that value.
