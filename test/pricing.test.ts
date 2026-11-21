@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { COVERAGE_NOTE, getPricing, LIMITS, PRICES_USD } from "../src/config";
+import { COVERAGE_NOTE, DEFAULT_INFO_URL, getPricing, LIMITS, PRICES_USD, userAgent } from "../src/config";
 
 describe("pricing", () => {
   it("keeps the published prices in one config object", () => {
@@ -29,5 +29,7 @@ describe("pricing", () => {
     expect(pricing.links.privacy).toBe("https://a11y-probe.example/legal/privacy");
     expect(pricing.defaultStandard).toBe("wcag22aa");
     expect(pricing.userAgent).toBe("A11yProbe/1.0 (+https://a11y-probe.example/)");
+    expect(DEFAULT_INFO_URL).toBe("https://a11y.aiagentpay.cloud/");
+    expect(userAgent()).toBe("A11yProbe/1.0 (+https://a11y.aiagentpay.cloud/)");
   });
 });

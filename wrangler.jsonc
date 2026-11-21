@@ -18,6 +18,10 @@
       "head_sampling_rate": 0.01
     }
   },
+  // Landing page and /legal. `wrangler deploy` uploads ./public with the Worker.
+  // Paths outside run_worker_first are served from the ASSETS binding.
+  // a11y.aiagentpay.cloud is already attached to this Worker. It is not
+  // listed under routes, so a deploy does not rebind the custom domain.
   "assets": {
     "directory": "./public",
     "binding": "ASSETS",
@@ -39,11 +43,11 @@
       }
     }
   ],
-  // Daily page counters only. Create the namespace before deploy and replace the id.
+  // Daily page counters only. This id is the namespace on the deployed testnet Worker.
   "kv_namespaces": [
     {
       "binding": "CAPS",
-      "id": "00000000000000000000000000000000"
+      "id": "10c7bfb486484f00b9fe8719a1f38f63"
     }
   ],
   // Testnet by default (Base Sepolia). `env.production` is Base mainnet.
@@ -52,7 +56,7 @@
   // Stripe crypto deposit address, without a code change.
   // CDP keys are unused on the testnet facilitator.
   "vars": {
-    "INFO_URL": "https://a11y-probe.example/",
+    "INFO_URL": "https://a11y.aiagentpay.cloud/",
     "X402_NETWORK": "eip155:84532",
     "FACILITATOR_URL": "https://x402.org/facilitator",
     "GLOBAL_DAILY_PAGE_CAP": "20",
@@ -83,6 +87,7 @@
           }
         }
       ],
+      // Still a placeholder. Create a production namespace before the first mainnet deploy.
       "kv_namespaces": [
         {
           "binding": "CAPS",
@@ -90,7 +95,7 @@
         }
       ],
       "vars": {
-        "INFO_URL": "https://a11y-probe.example/",
+        "INFO_URL": "https://a11y.aiagentpay.cloud/",
         "X402_NETWORK": "eip155:8453",
         "FACILITATOR_URL": "https://api.cdp.coinbase.com/platform/v2/x402",
         "GLOBAL_DAILY_PAGE_CAP": "20",

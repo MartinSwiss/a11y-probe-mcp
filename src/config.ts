@@ -11,8 +11,8 @@ export const PRODUCT = {
   userAgentProduct: "A11yProbe",
 } as const;
 
-/** Placeholder until the owner sets the public info URL on the Worker. */
-export const DEFAULT_INFO_URL = "https://a11y-probe.example/";
+/** Public origin. The Worker overrides this with INFO_URL, which uses the same value. */
+export const DEFAULT_INFO_URL = "https://a11y.aiagentpay.cloud/";
 
 export function userAgent(infoUrl: string = DEFAULT_INFO_URL): string {
   return `${PRODUCT.userAgentProduct}/1.0 (+${infoUrl})`;

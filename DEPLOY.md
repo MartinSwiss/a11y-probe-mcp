@@ -17,7 +17,9 @@ npx wrangler login
 
 ## 2. Counters
 
-Daily page caps use one KV namespace. Create it and paste the id into **both** `kv_namespaces` blocks in `wrangler.jsonc` (top level and `env.production`). The placeholder id is not a real namespace.
+Daily page caps use one KV namespace per environment. The testnet binding (`CAPS` on the top-level config) is `10c7bfb486484f00b9fe8719a1f38f63`. Leave that id as it is.
+
+`env.production` still has the placeholder id `00000000000000000000000000000000`. Before the first mainnet deploy, create a separate namespace and paste that id into the production block only:
 
 ```sh
 npx wrangler kv namespace create CAPS
@@ -56,7 +58,7 @@ npx wrangler secret put CDP_API_KEY_SECRET --env production
 
 ## 4. Public info URL
 
-Edit `INFO_URL` in `wrangler.jsonc` (both environments) to the origin you will actually serve, for example `https://a11y-probe-mcp.<account-subdomain>.workers.dev`. That value is the user-agent contact URL and the base for the terms and privacy links. Deploy again after you change it.
+`INFO_URL` is `https://a11y.aiagentpay.cloud/` in the testnet config and in `env.production`. That value is the user-agent contact URL (`A11yProbe/1.0 (+https://a11y.aiagentpay.cloud/)`) and the base for the terms and privacy links. Change it in both environments if the public origin changes, then deploy again.
 
 ## 5. Deploy testnet
 
@@ -64,11 +66,12 @@ Edit `INFO_URL` in `wrangler.jsonc` (both environments) to the origin you will a
 npx wrangler deploy --env=""
 ```
 
-`--env=""` is the top-level testnet config. A bare `wrangler deploy` warns when named environments exist.
+`--env=""` is the top-level testnet config. A bare `wrangler deploy` warns when named environments exist. This command uploads the Worker and the `public/` assets (home page, 404 page, and `/legal`), because `assets.directory` is set. `/mcp` and `/api/*` still run the Worker first. The custom domain `a11y.aiagentpay.cloud` is already attached and is not declared under `routes`.
 
-Note the `*.workers.dev` hostname. Then:
+Then:
 
 ```sh
+ORIGIN=https://a11y.aiagentpay.cloud
 curl -s "$ORIGIN/api/v1/pricing"
 curl -s -D - -o /dev/null -X POST "$ORIGIN/api/v1/scan/page" \
   -H 'content-type: application/json' \
@@ -91,13 +94,11 @@ npx wrangler dev --env=""
 npx @modelcontextprotocol/inspector
 ```
 
-Connect it to `https://<your-worker>/mcp` with Streamable HTTP. `get_pricing` is free. A paid tool returns an x402 payment error until the client pays. Do not point the inspector at a mainnet worker with a funded wallet unless you mean to spend USDC.
+Connect it to `https://a11y.aiagentpay.cloud/mcp` with Streamable HTTP. `get_pricing` is free. A paid tool returns an x402 payment error until the client pays. Do not point the inspector at a mainnet worker with a funded wallet unless you mean to spend USDC.
 
 ## 7. Registry and Glama
 
-`server.json` is the official MCP registry manifest. The name is `io.github.MartinSwiss/a11y-probe-mcp`. The remote URL is `https://{host}/mcp`. Before `mcp-publisher publish`, set `host` to the deployed hostname (or replace the template with the concrete URL). Publishing is a separate step. Do it only after the testnet deploy answers.
-
-Glama can launch the stdio entry, which proxies paid calls to the Worker:
+`server.json` is the official MCP registry manifest. The name is `io.github.MartinSwiss/a11y-probe-mcp`. The remote URL is `https://a11y.aiagentpay.cloud/mcp`. Publishing is a separate step. Do it only after the testnet deploy answers. `glama.json` only lists maintainers; its schema has no URL field. Glama can launch the stdio entry, which proxies paid calls to the Worker:
 
 ```json
 {
@@ -105,7 +106,7 @@ Glama can launch the stdio entry, which proxies paid calls to the Worker:
     "a11y-probe": {
       "command": "node",
       "args": ["--experimental-strip-types", "src/stdio.ts"],
-      "env": { "A11Y_PROBE_URL": "https://<your-worker>" }
+      "env": { "A11Y_PROBE_URL": "https://a11y.aiagentpay.cloud" }
     }
   }
 }
@@ -118,7 +119,7 @@ Glama can launch the stdio entry, which proxies paid calls to the Worker:
 When testnet scans and settlements look right:
 
 1. Put the CDP secrets into `--env production` (step 3). `PAY_TO` is already the public receiving address in that environment.
-2. Set production `INFO_URL` to the public origin.
+2. Replace the production `CAPS` placeholder with a real namespace id. `INFO_URL` is already `https://a11y.aiagentpay.cloud/`.
 3. `npx wrangler deploy --env production`
 4. Repeat the curl checks. A 402 is still not a charge. The first settled call spends test-or-real USDC on Base, so use an amount you accept (0.05 USDC for one page).
 

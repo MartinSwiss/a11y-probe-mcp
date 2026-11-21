@@ -16,6 +16,7 @@ describe("public pages", () => {
     expect(html).toContain("PAYMENT-SIGNATURE");
     expect(html).toContain("10 paid calls");
     expect(html).toContain("50 pages");
+    expect(html).toContain("https://a11y.aiagentpay.cloud/mcp");
     expect(html).toContain('lang="en"');
     expect(html.toLowerCase()).not.toContain("axe");
   });
@@ -26,6 +27,7 @@ describe("public pages", () => {
     expect(terms).toContain("capped at the amount paid");
     expect(terms).toContain("not legal advice");
     expect(terms).toContain("not a compliance guarantee");
+    expect(terms).toContain("https://a11y.aiagentpay.cloud");
     expect(terms).toContain("Draft");
   });
 
@@ -36,6 +38,7 @@ describe("public pages", () => {
     expect(privacy).toContain("Coinbase");
     expect(privacy).toContain("United States");
     expect(privacy).toContain("SHA-256");
+    expect(privacy).toContain("https://a11y.aiagentpay.cloud");
     expect(privacy).toContain("Page content");
   });
 
@@ -44,6 +47,7 @@ describe("public pages", () => {
     expect(imprint).toContain("[Legal name]");
     expect(imprint).toContain("[Street and number]");
     expect(imprint).toContain("MartinSwiss");
+    expect(imprint).toContain("https://a11y.aiagentpay.cloud");
     expect(imprint).toContain("placeholders");
   });
 });
@@ -59,6 +63,6 @@ describe("registry manifest", () => {
     expect(manifest.description.length).toBeGreaterThan(0);
     expect(manifest.description.length).toBeLessThanOrEqual(100);
     expect(manifest.remotes[0]?.type).toBe("streamable-http");
-    expect(manifest.remotes[0]?.url).toContain("/mcp");
+    expect(manifest.remotes[0]?.url).toBe("https://a11y.aiagentpay.cloud/mcp");
   });
 });

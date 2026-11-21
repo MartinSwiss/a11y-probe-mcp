@@ -21,7 +21,7 @@ The home page states the same numbers, how a 402 is paid, and the limits. Draft 
 
 ## Demo
 
-Against a local `npx wrangler dev` (see [DEPLOY.md](DEPLOY.md)) or a deployed origin:
+Against a local `npx wrangler dev` (see [DEPLOY.md](DEPLOY.md)) or the deployed origin `https://a11y.aiagentpay.cloud`:
 
 ```sh
 ORIGIN=http://127.0.0.1:8787
@@ -54,7 +54,7 @@ Connect to `$ORIGIN/mcp` over Streamable HTTP. `get_pricing` is free. Paid tools
 A local stdio process for Glama proxies the paid tools. `get_pricing` runs without a network:
 
 ```sh
-A11Y_PROBE_URL=https://<your-worker> node --experimental-strip-types src/stdio.ts
+A11Y_PROBE_URL=https://a11y.aiagentpay.cloud node --experimental-strip-types src/stdio.ts
 ```
 
 ## Configuration
@@ -65,10 +65,10 @@ A11Y_PROBE_URL=https://<your-worker> node --experimental-strip-types src/stdio.t
 | `X402_NETWORK` | var | `eip155:84532` (Base Sepolia) by default. `eip155:8453` in `env.production`. |
 | `FACILITATOR_URL` | var | `https://x402.org/facilitator` for tests. CDP `https://api.cdp.coinbase.com/platform/v2/x402` in production. |
 | `CDP_API_KEY_ID`, `CDP_API_KEY_SECRET` | secrets | CDP JWT auth for the mainnet facilitator only. |
-| `INFO_URL` | var | Public origin used in the user agent and legal links. |
+| `INFO_URL` | var | Public origin used in the user agent and legal links. `https://a11y.aiagentpay.cloud/` in both environments. |
 | `GLOBAL_DAILY_PAGE_CAP` | var | Default 20, to stay inside Browser Run's free daily minutes. |
 
-`server.json` publishes the server as `io.github.MartinSwiss/a11y-probe-mcp`. Fill in `{host}` after deploy, then publish. Do not publish before the Worker answers.
+`server.json` publishes the server as `io.github.MartinSwiss/a11y-probe-mcp`. The remote URL is `https://a11y.aiagentpay.cloud/mcp`. Do not publish before the Worker answers.
 
 ## Develop
 
