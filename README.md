@@ -64,7 +64,7 @@ A11Y_PROBE_URL=https://a11y.aiagentpay.cloud node --experimental-strip-types src
 | `PAY_TO` | var | Public Base address that receives USDC. Set in `wrangler.jsonc` for testnet and production. Override with a `PAY_TO` secret to swap it, including for a Stripe crypto address, without a code change. |
 | `X402_NETWORK` | var | `eip155:84532` (Base Sepolia) by default. `eip155:8453` in `env.production`. |
 | `FACILITATOR_URL` | var | `https://x402.org/facilitator` for tests. CDP `https://api.cdp.coinbase.com/platform/v2/x402` in production. |
-| `CDP_API_KEY_ID`, `CDP_API_KEY_SECRET` | secrets | CDP JWT auth for the mainnet facilitator only. |
+| `CDP_API_KEY_ID`, `CDP_API_KEY_SECRET` | secrets | CDP JWT auth for the mainnet facilitator. Required only under `env.production`. The testnet config does not list them. |
 | `INFO_URL` | var | Public origin used in the user agent and legal links. `https://a11y.aiagentpay.cloud/` in both environments. |
 | `GLOBAL_DAILY_PAGE_CAP` | var | Default 20, to stay inside Browser Run's free daily minutes. |
 
