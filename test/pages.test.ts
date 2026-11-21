@@ -8,6 +8,9 @@ function page(path: string): string {
 describe("public pages", () => {
   it("states the prices, the payment flow, and the limits", () => {
     const html = page("index.html");
+    expect(html).toContain("0.01");
+    expect(html).toContain("check_contrast");
+    expect(html).toContain("check_links_meta");
     expect(html).toContain("0.05");
     expect(html).toContain("0.50");
     expect(html).toContain("1.00");

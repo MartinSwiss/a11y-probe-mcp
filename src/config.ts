@@ -21,7 +21,9 @@ export function userAgent(infoUrl: string = DEFAULT_INFO_URL): string {
 /** USD per call. get_pricing is free. */
 export const PRICES_USD = {
   get_pricing: 0,
+  check_contrast: 0.01,
   scan_page: 0.05,
+  check_links_meta: 0.05,
   scan_site: 0.5,
   report: 1,
 } as const;

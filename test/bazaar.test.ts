@@ -5,8 +5,8 @@ import { bazaarResourceServerExtension, validateDiscoveryExtension } from "@x402
 import { describe, expect, it } from "vitest";
 import { bazaarForHttp, bazaarForTool } from "../src/payments/bazaar";
 
-const httpPaths = ["/api/v1/scan/page", "/api/v1/scan/site", "/api/v1/report"];
-const tools = ["scan_page", "scan_site", "report"] as const;
+const httpPaths = ["/api/v1/check/contrast", "/api/v1/check/links-meta", "/api/v1/scan/page", "/api/v1/scan/site", "/api/v1/report"];
+const tools = ["check_contrast", "check_links_meta", "scan_page", "scan_site", "report"] as const;
 
 function enrich(path: string) {
   const declared = bazaarForHttp(path).bazaar as Parameters<NonNullable<typeof bazaarResourceServerExtension.enrichDeclaration>>[0];
@@ -23,7 +23,12 @@ describe("bazaar discovery", () => {
         info: { input: { method?: string; body?: { authorized?: boolean } } };
       };
       expect(extension.info.input.method, path).toBe("POST");
-      expect(extension.info.input.body?.authorized, path).toBe(true);
+      if (path.endsWith("/check/contrast")) {
+        const body = extension.info.input.body as { pairs?: Array<{ foreground?: string }> };
+        expect(body.pairs?.[0]?.foreground, path).toBe("#767676");
+      } else {
+        expect(extension.info.input.body?.authorized, path).toBe(true);
+      }
       const result = validateDiscoveryExtension(extension as never);
       expect(result.valid, `${path} ${result.errors?.join("; ")}`).toBe(true);
     }
@@ -34,7 +39,12 @@ describe("bazaar discovery", () => {
       const extension = bazaarForTool(tool).bazaar as {
         info: { input: { example?: { authorized?: boolean } } };
       };
-      expect(extension.info.input.example?.authorized, tool).toBe(true);
+      if (tool === "check_contrast") {
+        const example = extension.info.input.example as { pairs?: unknown[] };
+        expect(example.pairs?.length, tool).toBeGreaterThan(0);
+      } else {
+        expect(extension.info.input.example?.authorized, tool).toBe(true);
+      }
       const result = validateDiscoveryExtension(extension as never);
       expect(result.valid, `${tool} ${result.errors?.join("; ")}`).toBe(true);
     }

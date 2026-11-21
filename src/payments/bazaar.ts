@@ -20,9 +20,59 @@ const pageProperties = {
 const pageExample = { url: "https://example.com/", standard: "wcag22aa", authorized: true };
 const siteExample = { start_url: "https://example.com/", max_pages: 1, standard: "wcag22aa", authorized: true };
 const reportExample = { start_url: "https://example.com/", max_pages: 1, language: "en", authorized: true };
+const contrastExample = { pairs: [{ foreground: "#767676", background: "#ffffff" }], fontSizePx: 16 };
+const linksExample = { url: "https://example.com/", authorized: true };
+
+const contrastProperties = {
+  pairs: {
+    type: "array",
+    maxItems: 50,
+    items: {
+      type: "object",
+      properties: {
+        foreground: { type: "string", description: "CSS color: hex, rgb, hsl, or a CSS color name." },
+        background: { type: "string", description: "CSS color: hex, rgb, hsl, or a CSS color name." },
+        fontSizePx: { type: "number", description: "Font size in CSS pixels for this pair." },
+        bold: { type: "boolean", description: "True when this pair is bold." },
+      },
+      required: ["foreground", "background"],
+    },
+  },
+  fontSizePx: { type: "number", description: "Default font size in CSS pixels." },
+  bold: { type: "boolean", description: "True when the default text is bold." },
+};
 
 export function bazaarForTool(tool: keyof typeof PRICES_USD): Record<string, unknown> {
   if (tool === "get_pricing") return {};
+  if (tool === "check_contrast") {
+    return declareDiscoveryExtension({
+      toolName: "check_contrast",
+      description: contrastDescription(),
+      inputSchema: { type: "object", properties: contrastProperties, required: ["pairs"] },
+      example: contrastExample,
+      output: {
+        example: {
+          pairs: [{ ratio: 4.54, aa: { normal: true, large: true }, aaa: { normal: false, large: true }, nonText: true, suggestion: null }],
+        },
+      },
+    });
+  }
+  if (tool === "check_links_meta") {
+    return declareDiscoveryExtension({
+      toolName: "check_links_meta",
+      description: linksDescription(),
+      inputSchema: {
+        type: "object",
+        properties: {
+          url: pageProperties.url,
+          authorized: pageProperties.authorized,
+        },
+        required: ["url", "authorized"],
+      },
+      example: linksExample,
+      output: { example: { title: "Example Domain", h1Count: 1, linksChecked: 1, links: [{ href: "https://example.com/", status: 200, broken: false }] } },
+    });
+  }
   if (tool === "scan_page") {
     return declareDiscoveryExtension({
       toolName: "scan_page",
@@ -77,6 +127,26 @@ export function bazaarForTool(tool: keyof typeof PRICES_USD): Record<string, unk
 }
 
 export function bazaarForHttp(path: string): Record<string, unknown> {
+  if (path.endsWith("/check/contrast")) {
+    return declareDiscoveryExtension({
+      bodyType: "json",
+      input: contrastExample,
+      inputSchema: { type: "object", properties: contrastProperties, required: ["pairs"] },
+      output: { example: { pairs: [{ ratio: 4.54, nonText: true, suggestion: null }] } },
+    });
+  }
+  if (path.endsWith("/check/links-meta")) {
+    return declareDiscoveryExtension({
+      bodyType: "json",
+      input: linksExample,
+      inputSchema: {
+        type: "object",
+        properties: { url: pageProperties.url, authorized: pageProperties.authorized },
+        required: ["url", "authorized"],
+      },
+      output: { example: { title: "Example Domain", metaDescriptionLength: 0, h1Count: 1, linksChecked: 0, links: [] } },
+    });
+  }
   if (path.endsWith("/scan/page")) {
     return declareDiscoveryExtension({
       bodyType: "json",
@@ -118,6 +188,14 @@ export function bazaarForHttp(path: string): Record<string, unknown> {
     },
     output: { example: { markdown: "not legal advice, no compliance guarantee" } },
   });
+}
+
+export function contrastDescription(): string {
+  return "Contrast ratios for up to 50 caller-supplied color pairs. No page is fetched. Each pair reports the WCAG 2.2 ratio, AA and AAA for normal and large text, the 3:1 non-text result, and a nearer foreground when AA is not met. Price 0.01 USD in USDC on Base, settled after a successful check.";
+}
+
+export function linksDescription(): string {
+  return "Title, meta description, language, viewport, canonical, headings, and Open Graph fields for one public page, plus up to 50 links on that page. authorized is true. No further pages are crawled. Price 0.05 USD in USDC on Base, settled after a successful check. Automated checks find roughly 57% of WCAG issues.";
 }
 
 export function pageDescription(): string {
