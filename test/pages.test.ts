@@ -82,5 +82,6 @@ describe("registry manifest", () => {
     expect(manifest.description.length).toBeLessThanOrEqual(100);
     expect(manifest.remotes[0]?.type).toBe("streamable-http");
     expect(manifest.remotes[0]?.url).toBe("https://a11y.aiagentpay.cloud/mcp");
+    expect((manifest as { websiteUrl?: string }).websiteUrl).toBe("https://a11y.aiagentpay.cloud/");
   });
 });

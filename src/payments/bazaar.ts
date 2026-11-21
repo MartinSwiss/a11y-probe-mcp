@@ -13,9 +13,13 @@ const pageProperties = {
   authorized: {
     type: "boolean",
     const: true,
-    description: "Must be true. Confirms the caller is allowed to scan this URL.",
+    description: "True when the caller may scan this URL.",
   },
 };
+
+const pageExample = { url: "https://example.com/", standard: "wcag22aa", authorized: true };
+const siteExample = { start_url: "https://example.com/", max_pages: 1, standard: "wcag22aa", authorized: true };
+const reportExample = { start_url: "https://example.com/", max_pages: 1, language: "en", authorized: true };
 
 export function bazaarForTool(tool: keyof typeof PRICES_USD): Record<string, unknown> {
   if (tool === "get_pricing") return {};
@@ -28,6 +32,7 @@ export function bazaarForTool(tool: keyof typeof PRICES_USD): Record<string, unk
         properties: pageProperties,
         required: ["url", "authorized"],
       },
+      example: pageExample,
       output: {
         example: {
           summary: { critical: 1, serious: 0, moderate: 0, minor: 0 },
@@ -51,6 +56,7 @@ export function bazaarForTool(tool: keyof typeof PRICES_USD): Record<string, unk
         properties: siteProperties,
         required: ["start_url", "authorized"],
       },
+      example: siteExample,
       output: { example: { pagesScanned: 1, topIssues: [{ ruleId: "image-alt", impact: "critical" }] } },
     });
   }
@@ -65,6 +71,7 @@ export function bazaarForTool(tool: keyof typeof PRICES_USD): Record<string, unk
       },
       required: ["start_url", "authorized"],
     },
+    example: reportExample,
     output: { example: { markdown: "# Accessibility scan report\n\nnot legal advice, no compliance guarantee\n" } },
   });
 }
@@ -73,19 +80,20 @@ export function bazaarForHttp(path: string): Record<string, unknown> {
   if (path.endsWith("/scan/page")) {
     return declareDiscoveryExtension({
       bodyType: "json",
-      input: { url: "https://example.com/", standard: "wcag22aa", authorized: true },
-      inputSchema: { properties: pageProperties, required: ["url", "authorized"] },
+      input: pageExample,
+      inputSchema: { type: "object", properties: pageProperties, required: ["url", "authorized"] },
       output: { example: { summary: { critical: 0, serious: 0, moderate: 0, minor: 0 }, violations: [] } },
     });
   }
   if (path.endsWith("/scan/site")) {
     return declareDiscoveryExtension({
       bodyType: "json",
-      input: { start_url: "https://example.com/", max_pages: 3, standard: "wcag22aa", authorized: true },
+      input: siteExample,
       inputSchema: {
+        type: "object",
         properties: {
-          start_url: { type: "string" },
-          max_pages: { type: "integer" },
+          start_url: { type: "string", description: "Public page where the scan starts. Later pages stay on this origin." },
+          max_pages: { type: "integer", minimum: 1, maximum: 10, description: "Page count, at most 10." },
           standard: standardSchema,
           authorized: pageProperties.authorized,
         },
@@ -96,12 +104,13 @@ export function bazaarForHttp(path: string): Record<string, unknown> {
   }
   return declareDiscoveryExtension({
     bodyType: "json",
-    input: { start_url: "https://example.com/", max_pages: 3, language: "en", authorized: true },
+    input: reportExample,
     inputSchema: {
+      type: "object",
       properties: {
-        start_url: { type: "string" },
-        max_pages: { type: "integer" },
-        language: { type: "string", enum: ["de", "fr", "en"] },
+        start_url: { type: "string", description: "Public page where the scan starts. Later pages stay on this origin." },
+        max_pages: { type: "integer", minimum: 1, maximum: 10, description: "Page count, at most 10." },
+        language: { type: "string", enum: ["de", "fr", "en"], description: "Report language. The default is en." },
         standard: standardSchema,
         authorized: pageProperties.authorized,
       },
@@ -112,13 +121,13 @@ export function bazaarForHttp(path: string): Record<string, unknown> {
 }
 
 export function pageDescription(): string {
-  return "Scan one public page for WCAG issues. Requires authorized true. No login, cookies, or stored page content. 0.05 USD via USDC on Base, settled only after a successful scan. Automated checks find roughly 57% of WCAG issues.";
+  return "One public page checked for WCAG issues. authorized is true. No login, cookies, or stored page content. Price 0.05 USD in USDC on Base, settled after a successful scan. Automated checks find roughly 57% of WCAG issues.";
 }
 
 export function siteDescription(): string {
-  return "Scan up to 10 same-origin pages starting from start_url. Requires authorized true. 0.50 USD via USDC on Base, settled only after a successful scan. Automated checks find roughly 57% of WCAG issues.";
+  return "Up to 10 same-origin pages, starting from start_url. authorized is true. Price 0.50 USD in USDC on Base, settled after a successful scan. Automated checks find roughly 57% of WCAG issues.";
 }
 
 export function reportDescription(): string {
-  return "Write a template Markdown accessibility report in de, fr, or en with a prioritised fix list. Not legal advice and no compliance guarantee. No model calls. 1.00 USD via USDC on Base, settled only after a successful scan.";
+  return "A template Markdown accessibility report in de, fr, or en, with a prioritised fix list. Not legal advice and no compliance guarantee. No model calls. Price 1.00 USD in USDC on Base, settled after a successful scan.";
 }

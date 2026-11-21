@@ -69,13 +69,29 @@ export async function charge(
     description: input.description,
     mimeType: "application/json",
   };
+  const transport = {
+    method: "POST",
+    adapter: {
+      getPath: () => {
+        try {
+          return new URL(input.resourceUrl).pathname;
+        } catch {
+          return "/";
+        }
+      },
+    },
+  };
+  // bazaarResourceServerExtension.enrichDeclaration sets method from this context.
+  // The declaration itself omits method until that hook runs.
+  const extensions = server.enrichExtensions(input.extensions, transport);
 
   const challenge = async (error?: string): Promise<ChargeResult> => {
     const paymentRequired = await server.createPaymentRequiredResponse(
       requirements,
       resource,
       error,
-      input.extensions,
+      extensions,
+      transport,
     );
     const body = error ? { ...paymentRequired, error } : paymentRequired;
     const headers = new Headers({
@@ -99,7 +115,7 @@ export async function charge(
   if (!matching) return challenge("INVALID_PAYMENT");
 
   try {
-    const verified = await server.verifyPayment(payload, matching);
+    const verified = await server.verifyPayment(payload, matching, extensions, transport);
     if (!verified.isValid) return challenge(verified.invalidReason ?? "INVALID_PAYMENT");
   } catch {
     return challenge("INVALID_PAYMENT");
@@ -109,7 +125,7 @@ export async function charge(
     state: "verified",
     settle: async () => {
       try {
-        const settled = await server.settlePayment(payload, matching);
+        const settled = await server.settlePayment(payload, matching, extensions, transport);
         if (!settled.success) {
           return {
             ok: false,

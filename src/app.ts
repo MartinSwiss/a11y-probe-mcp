@@ -6,7 +6,7 @@ import { createMcpServer } from "./mcp";
 import { bazaarForHttp, bazaarForTool, pageDescription, reportDescription, siteDescription } from "./payments/bazaar";
 import { charge } from "./payments/gate";
 import { PayToError, assertPayTo, payToAddress } from "./payments/facilitator";
-import { isInputFailure, preflight, readPaidRequest, statusFor, type PaidRequest } from "./preflight";
+import { isInputFailure, preflight, readPaidRequest, statusFor, type InputFailure, type PaidRequest } from "./preflight";
 import { buildReport } from "./scan/report";
 import { scanPage, scanSite, type ScanDeps } from "./scan/scan";
 import { boundFetch, resolveWithDoh } from "./scan/ssrf";
@@ -63,34 +63,38 @@ async function route(request: Request, env: Env, ctx: ExecutionContext, options:
 }
 
 async function handleHttp(request: Request, env: Env, options: AppOptions, tool: PaidRequest["tool"]): Promise<Response> {
-  let args: unknown;
-  try {
-    args = await request.json();
-  } catch {
-    return json({ error: { code: "invalid_input", message: "JSON object body is required" } }, 400);
-  }
-  const paid = readPaidRequest(tool, args);
-  if (isInputFailure(paid)) return json({ error: { code: paid.code, message: paid.message } }, paid.status);
+  const token = request.headers.get("payment-signature") ?? request.headers.get("x-payment");
+  const body = await readJsonBody(request);
+  const parsed = body.json ? readPaidRequest(tool, body.args) : inputFailure("JSON object body is required");
 
-  const limited = await limit(request, env, request.headers.get("payment-signature") ?? request.headers.get("x-payment"));
+  // An unpaid probe (empty body, or no authorized:true) gets the payment
+  // challenge before consent is checked. A paid call still needs consent,
+  // and that refusal happens before verify or settle.
+  if (!token && (!body.json || (isInputFailure(parsed) && parsed.code === "unauthorized"))) {
+    return paymentChallenge(request, env, tool, null);
+  }
+  if (isInputFailure(parsed)) return json({ error: { code: parsed.code, message: parsed.message } }, parsed.status);
+
+  const limited = await limit(request, env, token);
   if (limited) return limited;
 
   const deps = scanDependencies(env, options);
-  const ready = await preflight(paid, deps, kvCapStore(env.CAPS), numberCap(env));
+  const ready = await preflight(parsed, deps, kvCapStore(env.CAPS), numberCap(env));
   if (!ready.ok) return json({ error: { code: ready.code, message: ready.message } }, ready.status);
 
-  const descriptions = { scan_page: pageDescription(), scan_site: siteDescription(), report: reportDescription() };
+  if (!token) return paymentChallenge(request, env, tool, null);
+
   const charged = await charge(env, {
     price: PRICES_USD[tool],
     resourceUrl: new URL(request.url).href,
-    description: descriptions[tool],
-    paymentToken: request.headers.get("payment-signature") ?? request.headers.get("x-payment"),
+    description: descriptionFor(tool),
+    paymentToken: token,
     extensions: bazaarForHttp(new URL(request.url).pathname),
   });
   if (charged.state === "error") return json(charged.body, charged.status);
   if (charged.state === "challenge") return json(charged.body, charged.status, charged.headers);
 
-  const outcome = await runPaid(paid, deps);
+  const outcome = await runPaid(parsed, deps);
   if (!outcome.ok) return json({ error: { code: outcome.code, message: outcome.message } }, statusFor(outcome.code));
 
   const settled = await charged.settle();
@@ -109,6 +113,39 @@ async function handleHttp(request: Request, env: Env, options: AppOptions, tool:
   const headers = new Headers({ "payment-response": btoa(JSON.stringify(settled.settlement)) });
   const payload = "markdown" in outcome ? { markdown: outcome.markdown } : outcome.result;
   return json(payload, 200, headers);
+}
+
+function inputFailure(message: string): InputFailure {
+  return { ok: false, status: 400, code: "invalid_input", message };
+}
+
+async function readJsonBody(request: Request): Promise<{ json: true; args: unknown } | { json: false }> {
+  const raw = await request.text();
+  if (raw.trim() === "") return { json: false };
+  try {
+    return { json: true, args: JSON.parse(raw) as unknown };
+  } catch {
+    return { json: false };
+  }
+}
+
+function descriptionFor(tool: PaidRequest["tool"]): string {
+  if (tool === "scan_page") return pageDescription();
+  if (tool === "scan_site") return siteDescription();
+  return reportDescription();
+}
+
+async function paymentChallenge(request: Request, env: Env, tool: PaidRequest["tool"], token: string | null): Promise<Response> {
+  const charged = await charge(env, {
+    price: PRICES_USD[tool],
+    resourceUrl: new URL(request.url).href,
+    description: descriptionFor(tool),
+    paymentToken: token,
+    extensions: bazaarForHttp(new URL(request.url).pathname),
+  });
+  if (charged.state === "error") return json(charged.body, charged.status);
+  if (charged.state === "challenge") return json(charged.body, charged.status, charged.headers);
+  return json({ error: { code: "payment", message: "Payment was not settled" } }, 402);
 }
 
 async function handleMcp(request: Request, env: Env, ctx: ExecutionContext, options: AppOptions): Promise<Response> {
