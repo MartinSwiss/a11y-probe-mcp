@@ -3,6 +3,7 @@
   "name": "io.github.MartinSwiss/a11y-probe-mcp",
   "title": "A11y Probe",
   "description": "Paid WCAG scans for AI agents over MCP, settled with x402 USDC on Base.",
+  "websiteUrl": "https://a11y.aiagentpay.cloud/",
   "repository": {
     "url": "https://github.com/MartinSwiss/a11y-probe-mcp",
     "source": "github"

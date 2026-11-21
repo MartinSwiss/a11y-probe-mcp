@@ -24,6 +24,7 @@ async function call(app: ExportedHandler<Env>, request: Request, env: Env): Prom
 
 interface Recorded {
   path: string;
+  body?: { paymentPayload?: { resource?: { url?: string }; extensions?: { bazaar?: unknown } } };
 }
 
 async function listen(
@@ -47,7 +48,7 @@ function startFacilitator(): Promise<{ url: string; calls: Recorded[]; close: ()
   const calls: Recorded[] = [];
   const seen = new Set<string>();
   return listen((req, res, raw) => {
-    calls.push({ path: req.url ?? "" });
+    calls.push({ path: req.url ?? "", body: raw ? (JSON.parse(raw) as Recorded["body"]) : undefined });
     const send = (status: number, payload: unknown) => {
       res.writeHead(status, { "content-type": "application/json" });
       res.end(JSON.stringify(payload));
@@ -179,6 +180,9 @@ describe("x402 payments", () => {
     expect(body.accepts?.length).toBeGreaterThan(0);
     expect(body.accepts?.[0]?.network).toBe("eip155:84532");
     expect(body.extensions?.bazaar?.info?.input?.type).toBe("http");
+    const input = body.extensions?.bazaar?.info?.input as { method?: string; body?: { authorized?: boolean } };
+    expect(input.method).toBe("POST");
+    expect(input.body?.authorized).toBe(true);
     expect(response.headers.get("payment-required")).toBeTruthy();
     expect(facilitator.calls.map((call) => call.path)).toEqual(["/supported"]);
     expect(fetchImpl.urls.some((url) => url.endsWith("/robots.txt"))).toBe(true);
@@ -204,6 +208,9 @@ describe("x402 payments", () => {
     const payload = await client.createPaymentPayload(required);
     const paid = await call(app, scanRequest(payload), env);
     expect(paid.status).toBe(200);
+    const settled = facilitator.calls.find((entry) => entry.path === "/settle");
+    expect(settled?.body?.paymentPayload?.resource?.url).toContain("/api/v1/scan/page");
+    expect(settled?.body?.paymentPayload?.extensions?.bazaar).toBeTruthy();
     const result = (await paid.json()) as { violations: Array<{ ruleId: string }> };
     expect(result.violations.map((item) => item.ruleId)).toContain("image-alt");
     expect(facilitator.calls.filter((call) => call.path === "/settle")).toHaveLength(1);
@@ -262,6 +269,66 @@ describe("x402 payments", () => {
     const replayBody = (await replay.json()) as { error?: string };
     expect(replayBody.error).toBe("replayed");
     expect(facilitator.calls.filter((call) => call.path === "/settle")).toHaveLength(1);
+  });
+
+  it("returns 402 for an unpaid empty body and refuses a paid call without consent before settlement", async () => {
+    const fetchImpl = pageFetch();
+    const env = makeEnv(facilitator.url, memoryKv());
+    const app = createApp({
+      fetchImpl,
+      resolveAddresses: publicDns(),
+      inspect: inspectOk(),
+      now: () => new Date("2026-11-18T12:00:00.000Z"),
+    });
+    const empty = await call(
+      app,
+      new Request("https://a11y-probe.example/api/v1/scan/page", {
+        method: "POST",
+        headers: { "content-type": "application/json", "cf-connecting-ip": "203.0.113.11" },
+        body: "",
+      }),
+      env,
+    );
+    expect(empty.status).toBe(402);
+    expect(empty.headers.get("payment-required")).toBeTruthy();
+    const missing = await call(
+      app,
+      new Request("https://a11y-probe.example/api/v1/scan/site", {
+        method: "POST",
+        headers: { "content-type": "application/json", "cf-connecting-ip": "203.0.113.12" },
+        body: JSON.stringify({ start_url: "https://example.com/" }),
+      }),
+      env,
+    );
+    expect(missing.status).toBe(402);
+    expect(missing.headers.get("payment-required")).toBeTruthy();
+    expect(fetchImpl.urls.some((url) => url.includes("example.com"))).toBe(false);
+
+    const challenge = await call(app, scanRequest(), env);
+    const required = (await challenge.json()) as PaymentRequired;
+    const { client } = await paymentClient();
+    const payload = await client.createPaymentPayload(required);
+    const settles = facilitator.calls.filter((entry) => entry.path === "/settle").length;
+    const verifies = facilitator.calls.filter((entry) => entry.path === "/verify").length;
+    const headers = new Headers({
+      "content-type": "application/json",
+      "cf-connecting-ip": "203.0.113.13",
+      "payment-signature": btoa(JSON.stringify(payload)),
+    });
+    const refused = await call(
+      app,
+      new Request("https://a11y-probe.example/api/v1/scan/page", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ url: "https://example.com/" }),
+      }),
+      env,
+    );
+    expect(refused.status).toBe(400);
+    const refusedBody = (await refused.json()) as { error?: { code?: string } };
+    expect(refusedBody.error?.code).toBe("unauthorized");
+    expect(facilitator.calls.filter((entry) => entry.path === "/settle")).toHaveLength(settles);
+    expect(facilitator.calls.filter((entry) => entry.path === "/verify")).toHaveLength(verifies);
   });
 
   it("rejects a cap and a rate limit before payment", async () => {

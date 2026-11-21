@@ -78,5 +78,14 @@ describe("unpaid scan_page in wrangler workerd", () => {
     const body = JSON.parse(text) as { accepts?: Array<{ network?: string; payTo?: string }> };
     expect(body.accepts?.[0]?.network).toBe("eip155:84532");
     expect(body.accepts?.[0]?.payTo?.toLowerCase()).toBe(PAY_TO);
+
+    const empty = await worker.fetch("https://a11y-probe.example/api/v1/scan/page", {
+      method: "POST",
+      headers: { "content-type": "application/json", "cf-connecting-ip": "203.0.113.11" },
+      body: "",
+    });
+    const emptyText = await empty.text();
+    expect(empty.status, emptyText).toBe(402);
+    expect(empty.headers.get("payment-required")).toBeTruthy();
   }, 60_000);
 });

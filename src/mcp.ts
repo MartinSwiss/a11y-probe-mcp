@@ -8,7 +8,7 @@ import { buildReport } from "./scan/report";
 import { scanPage, scanSite, type ScanDeps } from "./scan/scan";
 
 const standard = z.enum(STANDARDS).optional();
-const authorized = z.literal(true).describe("Must be true. Confirms you may scan this URL.");
+const authorized = z.literal(true).describe("True when the caller may scan this URL.");
 
 export function createMcpServer(env: Env, deps: ScanDeps): McpServer {
   const payTo = assertPayTo(env.PAY_TO);
