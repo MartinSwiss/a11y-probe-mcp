@@ -2,6 +2,8 @@
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "a11y-probe-mcp",
   "main": "src/index.ts",
+  // Version preview hostnames are off. workers.dev is unchanged.
+  "preview_urls": false,
   "compatibility_date": "2026-11-18",
   "compatibility_flags": ["nodejs_compat"],
   // axe-core builds its injectable source with Function#toString(). Wrangler's
@@ -54,7 +56,8 @@
   // PAY_TO is a public receiving address, not a secret. Override it with a
   // PAY_TO secret or .dev.vars entry to swap wallets, including a future
   // Stripe crypto deposit address, without a code change.
-  // CDP keys are unused on the testnet facilitator.
+  // CDP keys are unused on the testnet facilitator, so this environment
+  // does not require them. env.production still does.
   "vars": {
     "INFO_URL": "https://a11y.aiagentpay.cloud/",
     "X402_NETWORK": "eip155:84532",
@@ -62,11 +65,9 @@
     "GLOBAL_DAILY_PAGE_CAP": "20",
     "PAY_TO": "0x4C1265A4c0e7128aa71513080988dD609f3fDC32"
   },
-  "secrets": {
-    "required": ["CDP_API_KEY_ID", "CDP_API_KEY_SECRET"]
-  },
   "env": {
     "production": {
+      "preview_urls": false,
       "assets": {
         "directory": "./public",
         "binding": "ASSETS",

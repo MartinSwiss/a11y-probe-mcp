@@ -40,14 +40,9 @@ npx wrangler secret put PAY_TO --env production
 
 A secret named `PAY_TO` replaces the var of the same name. Do not commit the new value if you use the secret path.
 
-CDP keys are real secrets. The testnet facilitator `https://x402.org/facilitator` does not use them. If `wrangler dev` warns that the required secrets are missing, put placeholders for local testnet only:
+CDP keys are real secrets, and only the mainnet facilitator uses them. The top-level testnet config does not list `CDP_API_KEY_ID` or `CDP_API_KEY_SECRET` as required. Do not put placeholder CDP secrets on the testnet Worker.
 
-```sh
-printf 'dev' | npx wrangler secret put CDP_API_KEY_ID --env=""
-printf 'dev' | npx wrangler secret put CDP_API_KEY_SECRET --env=""
-```
-
-Mainnet, only when you are ready to go live (target Monday 30 November 2026). Create a CDP API key at the Coinbase Developer Platform first. Do not commit the values.
+Mainnet, only when you are ready to go live (target Monday 30 November 2026). Create a CDP API key at the Coinbase Developer Platform first. Do not commit the values. `env.production` still requires both secrets.
 
 ```sh
 npx wrangler secret put CDP_API_KEY_ID --env production
@@ -78,13 +73,13 @@ curl -s -D - -o /dev/null -X POST "$ORIGIN/api/v1/scan/page" \
   -d '{"url":"https://example.com/","authorized":true}'
 ```
 
-The scan request should be **402** with a `payment-required` header, not a charge. Confirm `/`, `/legal/terms`, `/legal/privacy`, and `/legal/imprint` load, and replace the imprint placeholders before you tell anyone the site is public.
+The scan request should be **402** with a `payment-required` header, not a charge. Confirm `/`, `/legal/terms`, `/legal/privacy`, and `/legal/imprint` load. The imprint names Martin Ma. The legal pages stay marked draft until counsel reviews them. `preview_urls` is false, so this deploy does not create a version preview URL. `workers.dev` is unchanged.
 
 Optional local check before deploy:
 
 ```sh
 cp .dev.vars.example .dev.vars
-# fill the two CDP placeholders; PAY_TO comes from wrangler.jsonc
+# PAY_TO comes from wrangler.jsonc. CDP keys are unused on testnet.
 npx wrangler dev --env=""
 ```
 

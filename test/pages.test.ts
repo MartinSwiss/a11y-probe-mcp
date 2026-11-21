@@ -28,7 +28,11 @@ describe("public pages", () => {
     expect(terms).toContain("not legal advice");
     expect(terms).toContain("not a compliance guarantee");
     expect(terms).toContain("https://a11y.aiagentpay.cloud");
-    expect(terms).toContain("Draft");
+    expect(terms).toContain("Martin Ma");
+    expect(terms).toContain("Bächlistrasse 18");
+    expect(terms).toContain("kontakt@aiagentpay.cloud");
+    expect(terms).toContain("Draft / Entwurf");
+    expect(terms).not.toContain("[");
   });
 
   it("names Cloudflare and Coinbase as processors abroad under the nDSG", () => {
@@ -39,16 +43,30 @@ describe("public pages", () => {
     expect(privacy).toContain("United States");
     expect(privacy).toContain("SHA-256");
     expect(privacy).toContain("https://a11y.aiagentpay.cloud");
+    expect(privacy).toContain("Martin Ma");
+    expect(privacy).toContain("Verantwortlicher");
+    expect(privacy).toContain("Bächlistrasse 18");
+    expect(privacy).toContain("8805 Richterswil");
+    expect(privacy).toContain("kontakt@aiagentpay.cloud");
+    expect(privacy).toContain("Draft / Entwurf");
     expect(privacy).toContain("Page content");
   });
 
-  it("leaves imprint fields as placeholders", () => {
+  it("names Martin Ma on the imprint and keeps the draft notice", () => {
     const imprint = page("legal/imprint/index.html");
-    expect(imprint).toContain("[Legal name]");
-    expect(imprint).toContain("[Street and number]");
+    expect(imprint).toContain("Martin Ma");
+    expect(imprint).toContain("Einzelperson");
+    expect(imprint).toContain("Bächlistrasse 18");
+    expect(imprint).toContain("8805 Richterswil");
+    expect(imprint).toContain("Schweiz");
+    expect(imprint).toContain("kontakt@aiagentpay.cloud");
+    expect(imprint).toContain("nicht eingetragen");
     expect(imprint).toContain("MartinSwiss");
     expect(imprint).toContain("https://a11y.aiagentpay.cloud");
-    expect(imprint).toContain("placeholders");
+    expect(imprint).toContain("Draft / Entwurf");
+    expect(imprint).not.toContain("[");
+    expect(imprint.toLowerCase()).not.toContain("phone");
+    expect(imprint).not.toContain("tel:");
   });
 });
 
