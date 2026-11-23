@@ -1,10 +1,12 @@
 # A11y Probe
 
-Paid WCAG scans for AI agents. A Cloudflare Worker exposes an MCP server at `/mcp` and the same calls over HTTP. Callers pay per call with x402 (USDC on Base). Automated checks find roughly 57% of WCAG issues. A report is a template: not legal advice, no compliance guarantee.
+[![A11y Probe MCP server](https://glama.ai/mcp/servers/MartinSwiss/a11y-probe-mcp/badge)](https://glama.ai/mcp/servers/MartinSwiss/a11y-probe-mcp)
+
+Paid WCAG scans for AI agents. Production runs at [https://a11y.aiagentpay.cloud](https://a11y.aiagentpay.cloud). The MCP server is [https://a11y.aiagentpay.cloud/mcp](https://a11y.aiagentpay.cloud/mcp). Callers pay per call with x402 in USDC on Base mainnet (`eip155:8453`). The same calls are available over HTTP. Automated checks find roughly 57% of WCAG issues. A report is a template: not legal advice, no compliance guarantee.
 
 Our code is MIT. The unmodified `axe-core` dependency is MPL-2.0 (see [NOTICE](NOTICE)). The product name does not use that dependency's name.
 
-Nothing in this repository is deployed. [DEPLOY.md](DEPLOY.md) is the owner's checklist.
+The top-level Wrangler config is Base Sepolia (`eip155:84532`) and is what `wrangler dev` uses. [DEPLOY.md](DEPLOY.md) is the owner's checklist.
 
 ## Prices
 
@@ -23,9 +25,10 @@ The home page states the same numbers, how a 402 is paid, and the limits. Draft 
 
 ## Demo
 
-Against a local `npx wrangler dev` (see [DEPLOY.md](DEPLOY.md)) or the deployed origin `https://a11y.aiagentpay.cloud`:
+Local `npx wrangler dev` (see [DEPLOY.md](DEPLOY.md)) uses the default config, Base Sepolia (`eip155:84532`). The live origin `https://a11y.aiagentpay.cloud` is Base mainnet (`eip155:8453`).
 
 ```sh
+# Local testnet. For production, set ORIGIN=https://a11y.aiagentpay.cloud
 ORIGIN=http://127.0.0.1:8787
 
 curl -s "$ORIGIN/api/v1/pricing"
@@ -35,7 +38,7 @@ curl -s -D - -o /tmp/a11y-402.json -X POST "$ORIGIN/api/v1/scan/page" \
   -d '{"url":"https://example.com/","authorized":true}'
 ```
 
-The second call is **402** with a `payment-required` header when the URL is allowed. It does not settle. A client that understands x402 signs USDC on Base Sepolia (`eip155:84532` in the default config) and retries with `PAYMENT-SIGNATURE`. Settlement happens only after the scan succeeds.
+The second call is **402** with a `payment-required` header when the URL is allowed. It does not settle. Against local dev, a client that understands x402 signs USDC on Base Sepolia (`eip155:84532`) and retries with `PAYMENT-SIGNATURE`. Against production, the same header is a Base mainnet (`eip155:8453`) USDC payment. Settlement happens only after the scan succeeds.
 
 Blocked cases never return 402:
 
