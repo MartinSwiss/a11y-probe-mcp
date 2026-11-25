@@ -87,5 +87,12 @@ describe("unpaid scan_page in wrangler workerd", () => {
     const emptyText = await empty.text();
     expect(empty.status, emptyText).toBe(402);
     expect(empty.headers.get("payment-required")).toBeTruthy();
+
+    const llms = await worker.fetch("https://a11y-probe.example/llms.txt");
+    const llmsText = await llms.text();
+    expect(llms.status, llmsText).toBe(200);
+    expect(llms.headers.get("content-type") ?? "").toMatch(/text\/plain/);
+    expect(llmsText).toContain("# A11y Probe");
+    expect(llmsText).toContain("https://a11y.aiagentpay.cloud/mcp");
   }, 60_000);
 });

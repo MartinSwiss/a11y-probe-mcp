@@ -54,6 +54,7 @@ export function bazaarForTool(tool: keyof typeof PRICES_USD): Record<string, unk
         example: {
           pairs: [{ ratio: 4.54, aa: { normal: true, large: true }, aaa: { normal: false, large: true }, nonText: true, suggestion: null }],
         },
+        schema: contrastOutputSchema,
       },
     });
   }
@@ -70,7 +71,10 @@ export function bazaarForTool(tool: keyof typeof PRICES_USD): Record<string, unk
         required: ["url", "authorized"],
       },
       example: linksExample,
-      output: { example: { title: "Example Domain", h1Count: 1, linksChecked: 1, links: [{ href: "https://example.com/", status: 200, broken: false }] } },
+      output: {
+        example: { title: "Example Domain", h1Count: 1, linksChecked: 1, links: [{ href: "https://example.com/", status: 200, broken: false }] },
+        schema: linksOutputSchema,
+      },
     });
   }
   if (tool === "scan_page") {
@@ -88,6 +92,7 @@ export function bazaarForTool(tool: keyof typeof PRICES_USD): Record<string, unk
           summary: { critical: 1, serious: 0, moderate: 0, minor: 0 },
           violations: [{ ruleId: "image-alt", impact: "critical", nodeCount: 1 }],
         },
+        schema: pageOutputSchema,
       },
     });
   }
@@ -107,7 +112,10 @@ export function bazaarForTool(tool: keyof typeof PRICES_USD): Record<string, unk
         required: ["start_url", "authorized"],
       },
       example: siteExample,
-      output: { example: { pagesScanned: 1, topIssues: [{ ruleId: "image-alt", impact: "critical" }] } },
+      output: {
+        example: { pagesScanned: 1, topIssues: [{ ruleId: "image-alt", impact: "critical" }] },
+        schema: siteOutputSchema,
+      },
     });
   }
   return declareDiscoveryExtension({
@@ -122,7 +130,10 @@ export function bazaarForTool(tool: keyof typeof PRICES_USD): Record<string, unk
       required: ["start_url", "authorized"],
     },
     example: reportExample,
-    output: { example: { markdown: "# Accessibility scan report\n\nnot legal advice, no compliance guarantee\n" } },
+    output: {
+      example: { markdown: "# Accessibility scan report\n\nnot legal advice, no compliance guarantee\n" },
+      schema: reportOutputSchema,
+    },
   });
 }
 
@@ -132,7 +143,10 @@ export function bazaarForHttp(path: string): Record<string, unknown> {
       bodyType: "json",
       input: contrastExample,
       inputSchema: { type: "object", properties: contrastProperties, required: ["pairs"] },
-      output: { example: { pairs: [{ ratio: 4.54, nonText: true, suggestion: null }] } },
+      output: {
+        example: { pairs: [{ ratio: 4.54, nonText: true, suggestion: null }] },
+        schema: contrastOutputSchema,
+      },
     });
   }
   if (path.endsWith("/check/links-meta")) {
@@ -144,7 +158,10 @@ export function bazaarForHttp(path: string): Record<string, unknown> {
         properties: { url: pageProperties.url, authorized: pageProperties.authorized },
         required: ["url", "authorized"],
       },
-      output: { example: { title: "Example Domain", metaDescriptionLength: 0, h1Count: 1, linksChecked: 0, links: [] } },
+      output: {
+        example: { title: "Example Domain", metaDescriptionLength: 0, h1Count: 1, linksChecked: 0, links: [] },
+        schema: linksOutputSchema,
+      },
     });
   }
   if (path.endsWith("/scan/page")) {
@@ -152,7 +169,10 @@ export function bazaarForHttp(path: string): Record<string, unknown> {
       bodyType: "json",
       input: pageExample,
       inputSchema: { type: "object", properties: pageProperties, required: ["url", "authorized"] },
-      output: { example: { summary: { critical: 0, serious: 0, moderate: 0, minor: 0 }, violations: [] } },
+      output: {
+        example: { summary: { critical: 0, serious: 0, moderate: 0, minor: 0 }, violations: [] },
+        schema: pageOutputSchema,
+      },
     });
   }
   if (path.endsWith("/scan/site")) {
@@ -169,7 +189,10 @@ export function bazaarForHttp(path: string): Record<string, unknown> {
         },
         required: ["start_url", "authorized"],
       },
-      output: { example: { pagesScanned: 1, topIssues: [] } },
+      output: {
+        example: { pagesScanned: 1, topIssues: [] },
+        schema: siteOutputSchema,
+      },
     });
   }
   return declareDiscoveryExtension({
@@ -186,26 +209,79 @@ export function bazaarForHttp(path: string): Record<string, unknown> {
       },
       required: ["start_url", "authorized"],
     },
-    output: { example: { markdown: "not legal advice, no compliance guarantee" } },
+    output: {
+      example: { markdown: "not legal advice, no compliance guarantee" },
+      schema: reportOutputSchema,
+    },
   });
 }
 
+const contrastOutputSchema = {
+  properties: {
+    pairs: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          ratio: { type: "number", description: "Contrast ratio." },
+          nonText: { type: "boolean", description: "True when the ratio is at least 3:1." },
+          suggestion: { description: "Nearer foreground hex, or null when AA is already met." },
+        },
+      },
+    },
+  },
+};
+
+const linksOutputSchema = {
+  properties: {
+    title: { type: "string" },
+    metaDescriptionLength: { type: "integer" },
+    h1Count: { type: "integer" },
+    linksChecked: { type: "integer" },
+    links: { type: "array" },
+  },
+};
+
+const pageOutputSchema = {
+  properties: {
+    summary: { type: "object" },
+    violations: { type: "array" },
+  },
+};
+
+const siteOutputSchema = {
+  properties: {
+    pagesScanned: { type: "integer" },
+    topIssues: { type: "array" },
+  },
+};
+
+const reportOutputSchema = {
+  properties: {
+    markdown: { type: "string" },
+  },
+};
+
+export function pricingDescription(): string {
+  return "Pricing for WCAG accessibility scans. Prices in USD, rate and daily limits, and links to the terms and privacy notice. Automated checks find roughly 57% of WCAG issues. Free.";
+}
+
 export function contrastDescription(): string {
-  return "Contrast ratios for up to 50 caller-supplied color pairs. No page is fetched. Each pair reports the WCAG 2.2 ratio, AA and AAA for normal and large text, the 3:1 non-text result, and a nearer foreground when AA is not met. Price 0.01 USD in USDC on Base, settled after a successful check.";
+  return "Color contrast check (WCAG 2.2 AA/AAA) for up to 50 caller-supplied color pairs. No page is fetched. Each pair reports the contrast ratio, AA and AAA for normal and large text, the 3:1 non-text result, and a nearer foreground of the same hue when AA is not met. Price 0.01 USD in USDC on Base, settled after a successful check.";
 }
 
 export function linksDescription(): string {
-  return "Title, meta description, language, viewport, canonical, headings, and Open Graph fields for one public page, plus up to 50 links on that page. authorized is true. No further pages are crawled. Price 0.05 USD in USDC on Base, settled after a successful check. Automated checks find roughly 57% of WCAG issues.";
+  return "Broken links and meta tag check for one public page. Reports title, meta description and its length, html lang, viewport, canonical, h1 count, og:title, and og:description, then checks up to 50 links on that page. authorized is true. No further pages are crawled. Price 0.05 USD in USDC on Base, settled after a successful check.";
 }
 
 export function pageDescription(): string {
-  return "One public page checked for WCAG issues. authorized is true. No login, cookies, or stored page content. Price 0.05 USD in USDC on Base, settled after a successful scan. Automated checks find roughly 57% of WCAG issues.";
+  return "WCAG 2.2 accessibility audit of one public web page. Returns rule ids, impact, WCAG tags, and up to three selectors. Default standard wcag22aa. authorized is true. No login, cookies, or stored page content. Price 0.05 USD in USDC on Base, settled after a successful scan. Automated checks find roughly 57% of WCAG issues.";
 }
 
 export function siteDescription(): string {
-  return "Up to 10 same-origin pages, starting from start_url. authorized is true. Price 0.50 USD in USDC on Base, settled after a successful scan. Automated checks find roughly 57% of WCAG issues.";
+  return "WCAG 2.2 accessibility audit of up to 10 same-origin pages, starting from start_url. Returns rule ids, impact, and the top issues. authorized is true. Price 0.50 USD in USDC on Base, settled after a successful scan. Automated checks find roughly 57% of WCAG issues.";
 }
 
 export function reportDescription(): string {
-  return "A template Markdown accessibility report in de, fr, or en, with a prioritised fix list. Not legal advice and no compliance guarantee. No model calls. Price 1.00 USD in USDC on Base, settled after a successful scan.";
+  return "WCAG accessibility report in Markdown (de, fr, or en) from a same-origin scan of up to 10 pages, with a prioritised fix list. Not legal advice and no compliance guarantee. No model calls. Price 1.00 USD in USDC on Base, settled after a successful scan.";
 }

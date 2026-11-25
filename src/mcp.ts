@@ -5,7 +5,7 @@ import { checkContrast } from "./check/contrast";
 import { checkLinksMeta } from "./check/links";
 import { LIMITS, getPricing, PRICES_USD, REPORT_LANGUAGES, STANDARDS } from "./config";
 import { assertPayTo, facilitatorConfigFor } from "./payments/facilitator";
-import { contrastDescription, linksDescription, pageDescription, reportDescription, siteDescription } from "./payments/bazaar";
+import { contrastDescription, linksDescription, pageDescription, pricingDescription, reportDescription, siteDescription } from "./payments/bazaar";
 import { buildReport } from "./scan/report";
 import { scanPage, scanSite, type ScanDeps } from "./scan/scan";
 
@@ -23,8 +23,7 @@ export function createMcpServer(env: Env, deps: ScanDeps): McpServer {
   server.registerTool(
     "get_pricing",
     {
-      description:
-        "Prices in USD, rate and daily limits, and links to the terms and privacy notice. Automated checks find roughly 57% of WCAG issues. Free.",
+      description: pricingDescription(),
       inputSchema: z.object({}),
       annotations: { readOnlyHint: true },
     },
