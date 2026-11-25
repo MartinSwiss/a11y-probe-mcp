@@ -1,0 +1,18 @@
+# A11y Probe
+
+> Automated WCAG accessibility scans for AI agents, paid per call with x402 USDC on Base mainnet.
+
+The service is at https://a11y.aiagentpay.cloud. The MCP endpoint is https://a11y.aiagentpay.cloud/mcp. REST calls are under https://a11y.aiagentpay.cloud/api/v1/. Automated checks find roughly 57% of WCAG issues. A report is a template: not legal advice, no compliance guarantee.
+
+## Tools
+
+- [get_pricing](https://a11y.aiagentpay.cloud/api/v1/pricing): Free (0 USD). Prices, limits, and links to the terms and privacy notice.
+- [scan_page](https://a11y.aiagentpay.cloud/api/v1/scan/page): 0.05 USD. WCAG 2.2 accessibility audit of one public web page.
+- [scan_site](https://a11y.aiagentpay.cloud/api/v1/scan/site): 0.50 USD. WCAG 2.2 accessibility audit of up to 10 same-origin pages.
+- [report](https://a11y.aiagentpay.cloud/api/v1/report): 1.00 USD. Markdown accessibility report in German, French, or English.
+- [check_contrast](https://a11y.aiagentpay.cloud/api/v1/check/contrast): 0.01 USD. Color contrast check (WCAG 2.2 AA/AAA) for up to 50 color pairs. No page is fetched.
+- [check_links_meta](https://a11y.aiagentpay.cloud/api/v1/check/links-meta): 0.05 USD. Broken links and meta tags for one public page, up to 50 links on that page.
+
+## Repository
+
+- [README](https://github.com/MartinSwiss/a11y-probe-mcp): Source, prices, and deploy notes.
