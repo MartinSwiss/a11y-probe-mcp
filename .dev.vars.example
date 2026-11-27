@@ -4,3 +4,9 @@
 # Only required when FACILITATOR_URL is the Coinbase CDP mainnet facilitator.
 CDP_API_KEY_ID=
 CDP_API_KEY_SECRET=
+# Stripe Machine Payments stays off unless STRIPE_MACHINE_PAYMENTS=true.
+# Set the values with `wrangler secret put`. Do not put a real key here.
+# STRIPE_MACHINE_PAYMENTS=true
+# STRIPE_SECRET_KEY=
+# STRIPE_DEPOSIT_ADDRESS=
+# STRIPE_PROFILE_ID=
