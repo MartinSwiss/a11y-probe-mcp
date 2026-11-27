@@ -12,6 +12,7 @@ import { PayToError, assertPayTo, payToAddress } from "./payments/facilitator";
 import { isInputFailure, preflight, readPaidRequest, statusFor, type InputFailure, type PaidRequest } from "./preflight";
 import { buildReport } from "./scan/report";
 import { scanPage, scanSite, type ScanDeps } from "./scan/scan";
+import { readSptCredential, type StripeSptVerifier } from "./payments/stripe-machine";
 import { boundFetch, resolveWithDoh } from "./scan/ssrf";
 
 export interface AppOptions {
@@ -21,6 +22,9 @@ export interface AppOptions {
   fetchImpl?: typeof fetch;
   resolveAddresses?: (hostname: string) => Promise<string[]>;
   now?: () => Date;
+  /** Test double for Stripe SPT confirmation. Production uses the Stripe API. */
+  stripeSptVerifier?: StripeSptVerifier;
+  stripeFetch?: typeof fetch;
 }
 
 const PAID = new Set(["scan_page", "scan_site", "report", "check_contrast", "check_links_meta"]);
@@ -84,7 +88,7 @@ async function handleHttp(request: Request, env: Env, options: AppOptions, tool:
     !token &&
     (!body.json ||
       (isInputFailure(parsed) && (parsed.code === "unauthorized" || tool === "check_contrast")));
-  if (unpaidProbe) return paymentChallenge(request, env, tool, null);
+  if (unpaidProbe) return paymentChallenge(request, env, options, tool, null);
   if (isInputFailure(parsed)) return json({ error: { code: parsed.code, message: parsed.message } }, parsed.status);
 
   const limited = await limit(request, env, token);
@@ -94,18 +98,19 @@ async function handleHttp(request: Request, env: Env, options: AppOptions, tool:
   if (parsed.tool !== "check_contrast") {
     const ready = await preflight(parsed, deps, kvCapStore(env.CAPS), numberCap(env));
     if (!ready.ok) return json({ error: { code: ready.code, message: ready.message } }, ready.status);
-    if (!token) return paymentChallenge(request, env, tool, null);
-    return finishPaid(request, env, tool, token, deps, ready.domainHash, parsed);
+    if (!token) return paymentChallenge(request, env, options, tool, null);
+    return finishPaid(request, env, options, tool, token, deps, ready.domainHash, parsed);
   }
 
-  if (!token) return paymentChallenge(request, env, tool, null);
-  return finishPaid(request, env, tool, token, deps, await hashDomain("check_contrast"), parsed);
+  if (!token) return paymentChallenge(request, env, options, tool, null);
+  return finishPaid(request, env, options, tool, token, deps, await hashDomain("check_contrast"), parsed);
 
 }
 
 async function finishPaid(
   request: Request,
   env: Env,
+  options: AppOptions,
   tool: PaidRequest["tool"],
   token: string,
   deps: ReturnType<typeof scanDependencies>,
@@ -118,6 +123,7 @@ async function finishPaid(
     description: descriptionFor(tool),
     paymentToken: token,
     extensions: bazaarForHttp(new URL(request.url).pathname),
+    ...stripeChargeExtras(request, options),
   });
   if (charged.state === "error") return json(charged.body, charged.status);
   if (charged.state === "challenge") return json(charged.body, charged.status, charged.headers);
@@ -143,6 +149,15 @@ async function finishPaid(
   return json(payload, 200, headers);
 }
 
+function stripeChargeExtras(request: Request, options: AppOptions) {
+  return {
+    sptCredential: readSptCredential(request),
+    ...(options.stripeSptVerifier ? { sptVerifier: options.stripeSptVerifier } : {}),
+    ...(options.stripeFetch ? { stripeFetch: options.stripeFetch } : {}),
+    ...(options.now ? { now: options.now() } : {}),
+  };
+}
+
 function inputFailure(message: string): InputFailure {
   return { ok: false, status: 400, code: "invalid_input", message };
 }
@@ -165,13 +180,14 @@ function descriptionFor(tool: PaidRequest["tool"]): string {
   return reportDescription();
 }
 
-async function paymentChallenge(request: Request, env: Env, tool: PaidRequest["tool"], token: string | null): Promise<Response> {
+async function paymentChallenge(request: Request, env: Env, options: AppOptions, tool: PaidRequest["tool"], token: string | null): Promise<Response> {
   const charged = await charge(env, {
     price: PRICES_USD[tool],
     resourceUrl: new URL(request.url).href,
     description: descriptionFor(tool),
     paymentToken: token,
     extensions: bazaarForHttp(new URL(request.url).pathname),
+    ...stripeChargeExtras(request, options),
   });
   if (charged.state === "error") return json(charged.body, charged.status);
   if (charged.state === "challenge") return json(charged.body, charged.status, charged.headers);

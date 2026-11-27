@@ -75,6 +75,37 @@ A11Y_PROBE_URL=https://a11y.aiagentpay.cloud node --experimental-strip-types src
 
 `server.json` publishes the server as `io.github.MartinSwiss/a11y-probe-mcp`. The remote URL is `https://a11y.aiagentpay.cloud/mcp`. Do not publish before the Worker answers.
 
+## Stripe Machine Payments (optional, off by default)
+
+This is off unless `STRIPE_MACHINE_PAYMENTS` is the exact string `true`. While it is off, paid calls stay on the current x402 flow: the CDP facilitator, the existing `PAY_TO` address, and the same 402 body.
+
+Turning it on needs a Stripe account and machine payments access. Card payments through Shared Payment Tokens are available to US businesses. Stablecoin payments are available in US states except New York. Sellers outside the US request access by emailing machine-payments@stripe.com with their Stripe account ID. Use a Stripe test-mode key (`sk_test_...`) and a sandbox deposit address before any live key.
+
+Setup, test mode first:
+
+1. In the Stripe Dashboard, request the Stablecoins and Crypto payment method. Create a Stripe profile and note its `profile_` id (sandbox profiles use `profile_test_`).
+2. Create a Base deposit address off the request path. The Stripe API version in the x402 guide is `2026-05-27.preview`. The sandbox deposit-address example uses `2026-07-29.preview`.
+
+```sh
+curl https://api.stripe.com/v1/crypto/deposit_addresses \
+  -u "$STRIPE_SECRET_KEY:" \
+  -H "Stripe-Version: 2026-07-29.preview" \
+  -d network=base
+```
+
+3. Store the secrets. They are not in `wrangler.jsonc`.
+
+```sh
+printf 'true' | npx wrangler secret put STRIPE_MACHINE_PAYMENTS --env=""
+npx wrangler secret put STRIPE_SECRET_KEY --env=""
+npx wrangler secret put STRIPE_DEPOSIT_ADDRESS --env=""
+npx wrangler secret put STRIPE_PROFILE_ID --env=""
+```
+
+Repeat with `--env production` only when you mean to take live USDC and cards. Do not commit the values.
+
+When the flag is on, the 402 lists the existing CDP/Base option first and a second exact-scheme option paid to `STRIPE_DEPOSIT_ADDRESS`. After that option settles, the worker records a Stripe PaymentIntent in `transaction_verification` mode. Tools priced at 0.50 USD or more (`scan_site`, `report`) also send an MPP `WWW-Authenticate: Payment method="stripe"` challenge for a card Shared Payment Token. Cheaper tools do not. A failed SPT confirmation does not run the scan.
+
 ## Develop
 
 ```sh
